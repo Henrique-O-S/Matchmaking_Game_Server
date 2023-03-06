@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <time.h>
 #include <cstdlib>
-// #include <papi.h>
+#include <papi.h>
 
 using namespace std;
 
@@ -87,9 +87,9 @@ void OnMultLine(int m_ar, int m_br)
 		for (j = 0; j < m_br; j++)
 			phb[i * m_br + j] = (double)(i + 1);
 
-	for (int i = 0; i <= m_ar; i++)
+	for (int i = 0; i < m_ar; i++)
 	{
-		for (int j = 0; j <= m_br; j++)
+		for (int j = 0; j < m_br; j++)
 		{
 			phc[i * m_ar + j] = (double)0.0;
 		}
@@ -149,8 +149,8 @@ void OnMultBlock(int m_ar, int m_br, int bkSize)
 		for (j = 0; j < m_br; j++)
 			phb[i * m_br + j] = (double)(i + 1);
 
-	for (i = 0; i <= m_ar; i++)
-		for (j = 0; j <= m_br; j++)
+	for (i = 0; i < m_ar; i++)
+		for (j = 0; j < m_br; j++)
 			phc[i * m_ar + j] = (double)0.0;
 
 
