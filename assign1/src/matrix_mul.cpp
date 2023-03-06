@@ -242,6 +242,10 @@ int main(int argc, char *argv[])
 	if (ret != PAPI_OK)
 		cout << "ERROR: PAPI_L2_DCM" << endl;
 
+	ret = PAPI_add_event(EventSet, PAPI_SP_OPS);
+	if (ret != PAPI_OK)
+		cout << "ERROR: PAPI_L2_DCM" << endl;
+
 	op = 1;
 	do
 	{
@@ -282,6 +286,7 @@ int main(int argc, char *argv[])
 			cout << "ERROR: Stop PAPI" << endl;
 		printf("L1 DCM: %lld \n", values[0]);
 		printf("L2 DCM: %lld \n", values[1]);
+		printf("Giga flops: %lld \n", values[2]);
 
 		ret = PAPI_reset(EventSet);
 		if (ret != PAPI_OK)
