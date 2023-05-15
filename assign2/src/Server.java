@@ -14,6 +14,11 @@ public class Server {
     private List<Client> clients;
     private ExecutorService executor;
 
+    public static void main(String[] args) {
+        Server server = new Server();
+        server.start();
+    }
+
     public Server() {
         clients = new ArrayList<>();
         executor = Executors.newFixedThreadPool(MAX_CLIENTS);
@@ -46,8 +51,15 @@ public class Server {
                     }
                 }
 
-                Game game = new Game(this.clients);
-                executor.submit(game);
+                if (this.clients.size() == MAX_CLIENTS) {
+                    for (Client client : clients) {
+                        SelectionKey key = client.getChannel().keyFor(selector);
+                        if (key != null)
+                            key.cancel();
+                    }
+                    Game game = new Game(this.clients);
+                    executor.submit(game);
+                }
             }
         } catch (IOException ex) {
             System.err.println("Server exception: " + ex.getMessage());
@@ -64,7 +76,7 @@ public class Server {
         clients.add(newClient);
 
         System.out.println("New client connected: " + clientChannel.getRemoteAddress());
-        newClient.sendMessage("Waiting for the game to begin...");
+        newClient.sendMessage("Waiting for the game to begin...\n");
     }
 
     private void handleRead(SelectionKey key) throws IOException {
@@ -77,7 +89,7 @@ public class Server {
             Client disconnectedClient = findClientByChannel(clientChannel);
             clients.remove(disconnectedClient);
             clientChannel.close();
-            System.out.println("Client disconnected: " + clientChannel.getRemoteAddress());
+            System.out.println("Client disconnected: " + clientChannel.getRemoteAddress() + "\n");
             return;
         }
 
@@ -85,7 +97,7 @@ public class Server {
         Client currentClient = findClientByChannel(clientChannel);
 
         if (currentClient != null)
-            System.out.println("Received message from client " + clientChannel.getRemoteAddress() + ": " + message);
+            System.out.println("Received message from client " + clientChannel.getRemoteAddress() + ": " + message + "\n");
     }
 
     private Client findClientByChannel(SocketChannel clientChannel) {
@@ -94,10 +106,5 @@ public class Server {
                 return client;
 
         return null;
-    }
-
-    public static void main(String[] args) {
-        Server server = new Server();
-        server.start();
     }
 }

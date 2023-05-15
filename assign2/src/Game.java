@@ -1,7 +1,9 @@
 import java.util.*;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
 
-class Game {
+public class Game implements Runnable {
     private static final int ROUNDS = 5;
 
     private List<Client> players;
@@ -16,24 +18,18 @@ class Game {
             this.playerScores[i] = 0;
     }
 
-    public void play() {
-        System.out.println("Starting game with " + this.numPlayers + " players");
-        for (int i = 0; i < this.numPlayers; i++) {
-            try {
-                this.players.get(i).sendMessage("Starting game with " + this.numPlayers + " players");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }  
+    @Override
+    public void run() {
+        System.out.println("\nStarting game with " + this.numPlayers + " players\n");
 
         for (int round = 1; round < ROUNDS; round++)
             playRound(round);
 
         int winner = getWinner();
-        System.out.println("Player " + winner + " won the game!");
+        System.out.println("Player " + winner + " won the game!\n");
         for (int i = 0; i < this.numPlayers; i++) {
             try {
-                this.players.get(i).sendMessage("Player " + winner + " won the game!");
+                this.players.get(i).sendMessage("Player " + winner + " won the game!\n");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -41,10 +37,10 @@ class Game {
     }
 
     private void playRound(int round) {
-        System.out.println("Round " + round);
+        System.out.println("[Round " + round + "]");
         for (int i = 0; i < this.numPlayers; i++) {
             try {
-                this.players.get(i).sendMessage("Round " + round);
+                this.players.get(i).sendMessage("[Round " + round + "]\n");
             } catch (IOException e) {
                 e.printStackTrace(); 
             }
@@ -53,18 +49,12 @@ class Game {
         int[] roundScores = new int[this.numPlayers];
         for (int player = 0; player < this.numPlayers; player++) {
             try {
-                this.players.get(player).sendMessage("It's your turn:");
+                roundScores[player] = getPlay(player);
             } catch (IOException e) {
                 e.printStackTrace(); 
             }
-            
-            int play = 1; // get a play from player channel
-
-            roundScores[player] = play;
-            this.playerScores[player] += play;
-            System.out.println("Player " + player + " got " + play);
         }
-
+            
         int max = roundScores[0];
         int winner = 0;
         for (int player = 1; player < this.numPlayers; player++) {
@@ -74,10 +64,10 @@ class Game {
             }
         }
 
-        System.out.println("Player " + winner + " won this round");
+        System.out.println("Player " + winner + " won this round\n");
         for (int i = 0; i < this.numPlayers; i++) {
             try {
-                this.players.get(i).sendMessage("Player " + winner + " won this round");
+                this.players.get(i).sendMessage("Player " + winner + " won this round\n");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -95,5 +85,25 @@ class Game {
         }
 
         return winner;
+    }
+
+    private int getPlay(int player) throws IOException {
+        this.players.get(player).sendMessage("[Type a number] > ");
+
+        SocketChannel channel = this.players.get(player).getChannel();
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+
+        while (true) {
+            buffer.clear();
+            int bytesRead = channel.read(buffer);
+            String message = new String(buffer.array(), 0, bytesRead).trim();
+            buffer.flip();
+            
+            int play = Integer.parseInt(message);
+            if (play >= 1 && play <= 6) {
+                System.out.println("Player " + player + " got " + play);
+                return play;
+            }
+        }
     }
 }
