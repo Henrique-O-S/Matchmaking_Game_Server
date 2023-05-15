@@ -6,12 +6,10 @@ import java.net.*;
 import java.util.*;
 
 public class MultiClientServer {
- 
     public static void main(String[] args) {
         if (args.length < 1) return;
         
-        while(true){
-
+        while (true) {
             int port = Integer.parseInt(args[0]);
             int maxClients = 3; // Maximum number of clients to handle concurrently
             int rounds = 10; // Number of rounds to play
