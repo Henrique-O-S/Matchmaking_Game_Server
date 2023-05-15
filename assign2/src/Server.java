@@ -46,8 +46,8 @@ public class Server {
                     }
                 }
 
-                //Game game = new Game(this.clients);
-                //executor.submit(game);
+                Game game = new Game(this.clients);
+                executor.submit(game);
             }
         } catch (IOException ex) {
             System.err.println("Server exception: " + ex.getMessage());
@@ -84,28 +84,8 @@ public class Server {
         String message = new String(buffer.array(), 0, bytesRead).trim();
         Client currentClient = findClientByChannel(clientChannel);
 
-        if (currentClient != null) {
+        if (currentClient != null)
             System.out.println("Received message from client " + clientChannel.getRemoteAddress() + ": " + message);
-            handleGameLogic(currentClient, message);
-        }
-    }
-
-    private void handleGameLogic(Client currentClient, String message) {
-        // Process game logic based on the received message
-        // In this example, assume the message is the client's play
-        int play = Integer.parseInt(message);
-
-        // Perform game logic and update client's score, etc.
-
-        executor.execute(() -> {
-            try {
-                // Send game result back to the client
-                currentClient.sendMessage("Game result: ...");
-            } catch (IOException e) {
-                System.err.println("Error sending message to client: " + e.getMessage());
-                // Handle the exception accordingly
-            }
-        });
     }
 
     private Client findClientByChannel(SocketChannel clientChannel) {

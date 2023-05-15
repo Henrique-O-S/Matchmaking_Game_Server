@@ -22,24 +22,22 @@ class Game {
             try {
                 this.players.get(i).sendMessage("Starting game with " + this.numPlayers + " players");
             } catch (IOException e) {
-                // Handle the exception here
-                e.printStackTrace(); // or any other error handling mechanism
+                e.printStackTrace();
             }
         }  
 
         for (int round = 1; round < ROUNDS; round++)
             playRound(round);
 
-        int max = playerScores[0];
-        int winner = 0;
-        for (int player = 1; player < this.numPlayers; player++) {
-            if (playerScores[player] > max) {
-                max = this.playerScores[player];
-                winner = player;
+        int winner = getWinner();
+        System.out.println("Player " + winner + " won the game!");
+        for (int i = 0; i < this.numPlayers; i++) {
+            try {
+                this.players.get(i).sendMessage("Player " + winner + " won the game!");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-
-        System.out.println("Player " + winner + " won the game!");
     }
 
     private void playRound(int round) {
@@ -48,8 +46,7 @@ class Game {
             try {
                 this.players.get(i).sendMessage("Round " + round);
             } catch (IOException e) {
-                // Handle the exception here
-                e.printStackTrace(); // or any other error handling mechanism
+                e.printStackTrace(); 
             }
         }
 
@@ -58,8 +55,7 @@ class Game {
             try {
                 this.players.get(player).sendMessage("It's your turn:");
             } catch (IOException e) {
-                // Handle the exception here
-                e.printStackTrace(); // or any other error handling mechanism
+                e.printStackTrace(); 
             }
             
             int play = 1; // get a play from player channel
@@ -83,9 +79,21 @@ class Game {
             try {
                 this.players.get(i).sendMessage("Player " + winner + " won this round");
             } catch (IOException e) {
-                // Handle the exception here
-                e.printStackTrace(); // or any other error handling mechanism
+                e.printStackTrace();
             }
         }
+    }
+
+    private int getWinner() {
+        int max = this.playerScores[0];
+        int winner = 0;
+        for (int player = 1; player < this.numPlayers; player++) {
+            if (this.playerScores[player] > max) {
+                max = this.playerScores[player];
+                winner = player;
+            }
+        }
+
+        return winner;
     }
 }
