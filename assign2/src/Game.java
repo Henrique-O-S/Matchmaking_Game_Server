@@ -1,11 +1,15 @@
+import java.util.*;
+
 class Game {
     private static final int ROUNDS = 5;
 
+    private List<Client> players;
     private int numPlayers;
     private int[] playerScores;
 
-    public Game(int numPlayers) {
-        this.numPlayers = numPlayers;
+    public Game(List<Client> players) {
+        this.players = players;
+        this.numPlayers = players.size();
         this.playerScores = new int[this.numPlayers];
         for (int i = 0; i < this.numPlayers; i++)
             this.playerScores[i] = 0;
@@ -13,7 +17,8 @@ class Game {
 
     public void play() {
         System.out.println("Starting game with " + this.numPlayers + " players");
-        // send message to all players
+        for (int i = 0; i < this.numPlayers; i++)
+            this.players[i].sendMessage("Starting game with " + this.numPlayers + " players");
 
         for (int round = 1; round < ROUNDS; round++)
             playRound(round);
@@ -30,14 +35,14 @@ class Game {
         System.out.println("Player " + winner + " won the game!");
     }
 
-
     private void playRound(int round) {
         System.out.println("Round " + round);
-        // send message to all players
+        for (int i = 0; i < this.numPlayers; i++)
+            this.players[i].sendMessage("Round " + round);
 
         int[] roundScores = new int[this.numPlayers];
         for (int player = 0; player < this.numPlayers; player++) {
-            // send message to player so he knows it's his turn
+            this.players[player].sendMessage("It's your turn:");
             int play = 1; // get a play from player channel
 
             roundScores[player] = play;
@@ -55,6 +60,7 @@ class Game {
         }
 
         System.out.println("Player " + winner + " won this round");
-        // send message to all players
+        for (int i = 0; i < this.numPlayers; i++)
+            this.players[i].sendMessage("Player " + winner + " won this round");
     }
 }

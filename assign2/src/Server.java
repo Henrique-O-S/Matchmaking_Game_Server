@@ -11,11 +11,11 @@ public class Server {
     private static final int MAX_CLIENTS = 3;
 
     private Selector selector;
-    private List<Client> players;
+    private List<Client> clients;
     private ExecutorService executor;
 
     public Server() {
-        players = new ArrayList<>();
+        clients = new ArrayList<>();
         executor = Executors.newFixedThreadPool(MAX_CLIENTS);
     }
 
@@ -45,6 +45,9 @@ public class Server {
                         handleRead(key);
                     }
                 }
+
+                //Game game = new Game(this.clients);
+                //executor.submit(game);
             }
         } catch (IOException ex) {
             System.err.println("Server exception: " + ex.getMessage());
@@ -57,11 +60,11 @@ public class Server {
         clientChannel.configureBlocking(false);
         clientChannel.register(selector, SelectionKey.OP_READ);
 
-        Client newPlayer = new Client(clientChannel);
-        players.add(newPlayer);
+        Client newClient = new Client(clientChannel);
+        clients.add(newClient);
 
         System.out.println("New client connected: " + clientChannel.getRemoteAddress());
-        newPlayer.sendMessage("Waiting for the game to begin...");
+        newClient.sendMessage("Waiting for the game to begin...");
     }
 
     private void handleRead(SelectionKey key) throws IOException {
@@ -71,33 +74,33 @@ public class Server {
 
         if (bytesRead == -1) {
             // Connection closed by client
-            Client disconnectedPlayer = findPlayerByChannel(clientChannel);
-            players.remove(disconnectedPlayer);
+            Client disconnectedClient = findClientByChannel(clientChannel);
+            clients.remove(disconnectedClient);
             clientChannel.close();
             System.out.println("Client disconnected: " + clientChannel.getRemoteAddress());
             return;
         }
 
         String message = new String(buffer.array(), 0, bytesRead).trim();
-        Client currentPlayer = findPlayerByChannel(clientChannel);
+        Client currentClient = findClientByChannel(clientChannel);
 
-        if (currentPlayer != null) {
+        if (currentClient != null) {
             System.out.println("Received message from client " + clientChannel.getRemoteAddress() + ": " + message);
-            handleGameLogic(currentPlayer, message);
+            handleGameLogic(currentClient, message);
         }
     }
 
-    private void handleGameLogic(Client currentPlayer, String message) {
+    private void handleGameLogic(Client currentClient, String message) {
         // Process game logic based on the received message
         // In this example, assume the message is the client's play
         int play = Integer.parseInt(message);
 
-        // Perform game logic and update player's score, etc.
+        // Perform game logic and update client's score, etc.
 
         executor.execute(() -> {
             try {
-                // Send game result back to the player
-                currentPlayer.sendMessage("Game result: ...");
+                // Send game result back to the client
+                currentClient.sendMessage("Game result: ...");
             } catch (IOException e) {
                 System.err.println("Error sending message to client: " + e.getMessage());
                 // Handle the exception accordingly
@@ -105,10 +108,10 @@ public class Server {
         });
     }
 
-    private Client findPlayerByChannel(SocketChannel clientChannel) {
-        for (Client player : players)
-            if (player.getChannel() == clientChannel)
-                return player;
+    private Client findClientByChannel(SocketChannel clientChannel) {
+        for (Client client : clients)
+            if (client.getChannel() == clientChannel)
+                return client;
 
         return null;
     }
