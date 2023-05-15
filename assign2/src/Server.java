@@ -7,16 +7,19 @@ import java.util.concurrent.Executors;
 import java.net.InetSocketAddress;
 
 public class Server {
-    private static final int PORT = 5000;
+    private static final int PORT = 5002;
     private static final int MAX_CLIENTS = 3;
 
     private Selector selector;
     private List<Client> clients;
     private ExecutorService executor;
+    private Aux database;
+    private ArrayList<User> users;
 
     public Server() {
         clients = new ArrayList<>();
         executor = Executors.newFixedThreadPool(MAX_CLIENTS);
+        database = new Aux("data/users.txt");
     }
 
     public void start() {
@@ -26,7 +29,9 @@ public class Server {
             serverChannel.bind(new InetSocketAddress(PORT));
             serverChannel.configureBlocking(false);
             serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-
+            
+            users = database.loadUsers();
+            
             System.out.println("Server is listening on port " + PORT);
 
             while (true) {

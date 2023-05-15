@@ -5,8 +5,24 @@ import java.nio.channels.SocketChannel;
 class Client {
     private SocketChannel channel;
 
+    private User user;
+
+    public enum State{
+        CONNECTED,
+        AUTHENTICATED
+    }
+
     public Client(SocketChannel channel) {
         this.channel = channel;
+        this.user = new User();
+    }
+
+    public void setUser(User user){
+        this.user = user;
+    }
+
+    public boolean isAuthenticated(){
+        return this.user.getUsername() != "" && this.user.getPassword() != "";
     }
 
     public SocketChannel getChannel() {
