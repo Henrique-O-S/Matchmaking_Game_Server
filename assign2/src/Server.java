@@ -13,13 +13,13 @@ public class Server {
     private Selector selector;
     private List<Client> clients;
     private ExecutorService executor;
-    private Aux database;
+    private Database database;
     private ArrayList<User> users;
 
     public Server() {
         clients = new ArrayList<>();
         executor = Executors.newFixedThreadPool(MAX_CLIENTS);
-        database = new Aux("data/users.txt");
+        database = new Database("data/users.txt");
     }
 
     public void start() {
@@ -69,6 +69,8 @@ public class Server {
         clients.add(newClient);
 
         System.out.println("New client connected: " + clientChannel.getRemoteAddress());
+
+        newClient.s
         newClient.sendMessage("Waiting for the game to begin...");
     }
 

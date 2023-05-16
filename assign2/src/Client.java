@@ -7,7 +7,9 @@ class Client {
 
     private User user;
 
-    public enum State{
+    private ClientState state;
+
+    public enum ClientState{
         CONNECTED,
         AUTHENTICATED
     }
@@ -19,6 +21,14 @@ class Client {
 
     public void setUser(User user){
         this.user = user;
+    }
+
+    public ClientState getState(){
+        return state;
+    }
+
+    public void setState(ClientState state){
+        this.state = state;
     }
 
     public boolean isAuthenticated(){

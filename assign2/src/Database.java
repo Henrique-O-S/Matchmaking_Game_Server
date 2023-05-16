@@ -1,11 +1,11 @@
 import java.io.*;
 import java.util.ArrayList;
 
-class Aux {
+class Database {
 
     private String filename;
     private ArrayList<User> users;
-    public Aux(String filename) {
+    public Database(String filename) {
         this.filename = filename;
     }
 
