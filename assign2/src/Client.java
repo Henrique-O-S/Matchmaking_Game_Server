@@ -34,6 +34,15 @@ public class Client {
 
     public void sendMessage(String message) throws IOException {
         ByteBuffer buffer = ByteBuffer.wrap(message.getBytes());
+
+        buffer.clear();
+        buffer.put(message.getBytes());
+        buffer.flip();
+
         this.channel.write(buffer);
+    }
+
+    public SocketChannel getSocketChannel() {
+        return this.channel;
     }
 }
