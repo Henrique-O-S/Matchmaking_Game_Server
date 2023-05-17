@@ -189,6 +189,7 @@ public class Client {
                             channel.write(buffer);
                           
                         }else if(identifier.equals("EXIT")){
+                            System.out.println("Your updated score is " + user.getScore());
                             System.out.println("Exiting back to waiting queue");
                             buffer.clear();
                             buffer.put("OK".getBytes());

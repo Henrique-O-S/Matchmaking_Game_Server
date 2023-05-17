@@ -67,6 +67,20 @@ public class Game implements Runnable {
             e.printStackTrace();
         }
 
+        //UPDATING PLAYER RANKS
+        for(User player : players){
+            if(player.getScore() < 20) {
+                player.setScore(0);
+            }
+            else{
+                player.setScore(player.getScore()-20);
+            }
+        }
+
+        for(User player : winners){
+            player.setScore(player.getScore()+120);
+        }
+
         try {
             this.sendToAllUsers(players, "EXIT");
 
