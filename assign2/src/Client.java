@@ -3,6 +3,9 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Random;
 
 public class Client {
     private SocketChannel channel;
@@ -12,6 +15,8 @@ public class Client {
     private Scanner scanner;
 
     private static final int PORT = 5002;
+
+    private static final int TIMEOUT = 5000;
 
     private ByteBuffer buffer = ByteBuffer.allocate(1024);
 
@@ -136,6 +141,65 @@ public class Client {
                     break;
                 }
                 case AUTHENTICATED: {
+                }
+                case PLAYING: {
+                    while(true){
+                        message = readMessage();
+                        System.out.println("SERVER" + "-" + message);
+                        String[] splitMessage = message.split("-");
+                        String identifier = splitMessage[0];
+                        if(identifier.equals("INFO")){
+                            System.out.println(message);
+                            buffer.clear();
+                            buffer.put("OK".getBytes());
+                            buffer.flip();
+                            channel.write(buffer);
+                        } else if(identifier.equals("PLAY")){
+                            System.out.println(message);
+                            
+                            Timer timer = new Timer();
+        
+                            TimerTask timeoutTask = new TimerTask() {
+                                @Override
+                                public void run() {
+                                    System.out.println("\nTimeout reached. Playing automatically...");
+                                    Random random = new Random();
+                                    int play = random.nextInt(12) + 1;
+                                    buffer.clear();
+                                    buffer.put(Integer.toString(play).getBytes());
+                                    buffer.flip();
+                                    try {
+                                        channel.write(buffer);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            };
+                            timer.schedule(timeoutTask, TIMEOUT);
+                            
+                            scanner.nextLine(); // Wait for user to press Enter
+                            timer.cancel(); // Cancel the timeout task
+                            
+                            // Continue with the rest of the program
+                            Random random = new Random();
+                            int play = random.nextInt(12) + 1;
+                            buffer.clear();
+                            buffer.put(Integer.toString(play).getBytes());
+                            buffer.flip();
+                            channel.write(buffer);
+                          
+                        }else if(identifier.equals("EXIT")){
+                            System.out.println("Exiting back to waiting queue");
+                            buffer.clear();
+                            buffer.put("OK".getBytes());
+                            buffer.flip();
+                            channel.write(buffer);
+                            user.setState(User.State.WAITING_QUEUE);
+                            break;
+                        }
+
+                        
+                    }
                 }
 
             }

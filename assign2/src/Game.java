@@ -6,11 +6,11 @@ import java.nio.channels.*;
 public class Game implements Runnable {
     private static final int ROUNDS = 5;
 
-    private List<Client> players;
+    private List<User> players;
     private int numPlayers;
     private int[] playerScores;
 
-    public Game(List<Client> players) {
+    public Game(List<User> players) {
         this.players = players;
         this.numPlayers = players.size();
         this.playerScores = new int[this.numPlayers];
@@ -23,11 +23,13 @@ public class Game implements Runnable {
         //STARTING GAME
         System.out.println("\nStarting game with " + this.numPlayers + " players\n");
         try {
-            sendToAllClients(players, "INFO" + " " + "Starting game with " + this.numPlayers + " players\n");
+            sendToAllUsers(players, "INFO" + "-" + "Starting game with " + this.numPlayers + " players\n");
 
-            readConfirmationFromClients(players);
+            readConfirmationFromUsers(players);
 
-        } catch (IOException e) {
+            Thread.sleep(1000);
+
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
@@ -36,29 +38,39 @@ public class Game implements Runnable {
             playRound(round);
 
         //SENDING GAME RESULTS
-        List<Client> winners = getWinners();
+        List<User> winners = getWinners();
         System.out.println("Player(s): ");
 
-        for(Client player : winners){
+        for(User player : winners){
             System.out.println(player);
         }
 
         System.out.println("Won the game\n");
         try {
-            this.sendToAllClients(players, "INFO" + " " + "Player(s): ");
+            this.sendToAllUsers(players, "INFO" + "-" + "Player(s): ");
 
-            readConfirmationFromClients(players);
+            readConfirmationFromUsers(players);
 
-            for(Client player : winners){
-                this.sendToAllClients(players, "INFO" + " " + player.toString());
+            for(User player : winners){
+                this.sendToAllUsers(players, "INFO" + "-" + player.toString());
 
-                readConfirmationFromClients(players);
+                readConfirmationFromUsers(players);
             }
 
-            this.sendToAllClients(players, "INFO" + " " + "Won the game\n");
+            this.sendToAllUsers(players, "INFO" + "-" + "Won the game\n");
 
-            readConfirmationFromClients(players);
+            readConfirmationFromUsers(players);
 
+            Thread.sleep(1000);
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            this.sendToAllUsers(players, "EXIT");
+
+            readConfirmationFromUsers(players);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -68,10 +80,12 @@ public class Game implements Runnable {
         //SIGNALING ROUND
         System.out.println("[Round " + round + "]");
         try {
-            sendToAllClients(players, "INFO" + " " + "[Round " + round + "]\n");
+            sendToAllUsers(players, "INFO" + "-" + "[Round " + round + "]\n");
 
-            readConfirmationFromClients(players);
-        } catch (IOException e) {
+            readConfirmationFromUsers(players);
+
+            Thread.sleep(1000);
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace(); 
         }
 
@@ -80,14 +94,14 @@ public class Game implements Runnable {
         for (int player = 0; player < this.numPlayers; player++) {
             try {
                 roundScores[player] = getPlay(player);
-                //readConfirmationFromClients(players);
+                //readConfirmationFromUsers(players);
             } catch (IOException e) {
                 e.printStackTrace(); 
             }
         }
             
         int highscore = roundScores[0];
-        List<Client> winners = new ArrayList<>();
+        List<User> winners = new ArrayList<>();
         for (int player = 1; player < this.numPlayers; player++) {
             if (roundScores[player] > highscore) {
                 highscore = roundScores[player];
@@ -103,35 +117,37 @@ public class Game implements Runnable {
         //SENDING ROUND RESULTS
         System.out.println("Player(s): ");
 
-        for(Client player : winners){
+        for(User player : winners){
             System.out.println(player);
         }
 
         System.out.println("Won this round\n");
 
         try {
-            this.sendToAllClients(players, "INFO" + " " + "Player(s): ");
+            this.sendToAllUsers(players, "INFO" + "-" + "Player(s): ");
 
-            readConfirmationFromClients(players);
+            readConfirmationFromUsers(players);
 
-            for(Client player : winners){
-                this.sendToAllClients(players, "INFO" + " " + player.toString());
+            for(User player : winners){
+                this.sendToAllUsers(players, "INFO" + "-" + player.toString());
 
-                readConfirmationFromClients(players);
+                readConfirmationFromUsers(players);
             }
 
-            this.sendToAllClients(players, "INFO" + " " + "Won this round\n");
+            this.sendToAllUsers(players, "INFO" + "-" + "Won this round\n");
 
-            readConfirmationFromClients(players);
+            readConfirmationFromUsers(players);
 
-        } catch (IOException e) {
+            Thread.sleep(1000);
+
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private List<Client> getWinners() {
+    private List<User> getWinners() {
         int highscore = this.playerScores[0];
-        List<Client> winners = new ArrayList<>();
+        List<User> winners = new ArrayList<>();
         for (int player = 1; player < this.numPlayers; player++) {
             if (playerScores[player] > highscore) {
                 highscore = playerScores[player];
@@ -148,9 +164,9 @@ public class Game implements Runnable {
     }
 
     private int getPlay(int player) throws IOException {
-        this.players.get(player).sendMessage("PLAY" + " " + "[Type a number] > ");
+        sendToUser(this.players.get(player), "PLAY" + "-" + "Press ENTER to roll the dice");
 
-        SocketChannel channel = this.players.get(player).getChannel();
+        SocketChannel channel = this.players.get(player).getSocketChannel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
 
         while (true) {
@@ -160,23 +176,33 @@ public class Game implements Runnable {
             buffer.flip();
             
             int play = Integer.parseInt(message);
-            if (play >= 1 && play <= 6) {
+            if (play >= 1 && play <= 12) {
                 System.out.println("Player " + player + " got " + play);
                 return play;
             }
         }
     }
 
-    private void sendToAllClients(List<Client> players,String message)throws IOException{
-
-        System.out.println("Send to all clients: " + message);
+    private void sendToUser(User player,String message)throws IOException{
         
-        for(Client player : players){
-           player.sendMessage(message);
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+
+        buffer.clear();
+        buffer.put(message.getBytes());
+        buffer.flip();
+    
+        SocketChannel channel = player.getSocketChannel();
+        channel.write(buffer);
+    }
+
+    private void sendToAllUsers(List<User> players,String message)throws IOException{
+        
+        for(User player : players){
+           sendToUser(player, message);
         }
     }
 
-    private void readConfirmationFromClients(List<Client> players)throws IOException{
+    private void readConfirmationFromUsers(List<User> players)throws IOException{
 
         ByteBuffer buffer = ByteBuffer.allocate(1024);
 
@@ -184,7 +210,7 @@ public class Game implements Runnable {
 
         while (true) {
             
-            for(Client player : players){
+            for(User player : players){
 
                 while(true){
                     SocketChannel channel = player.getSocketChannel();
@@ -196,10 +222,8 @@ public class Game implements Runnable {
 
                     if(response.equals("OK")){
                         players_ready++;
-                        System.out.println(response);
+                        System.out.println("User: " + player.getUsername() + " is ready");
                         System.out.println("Players Ready: " + players_ready);
-                        System.out.println("User: "+player.toString()+" is ready");
-                        player.sendMessage("OK");
                         break;
                     }
                 }
@@ -207,7 +231,7 @@ public class Game implements Runnable {
 
             }
             if(players_ready == players.size()){
-                System.out.println("Proceding");
+                System.out.println("Proceeding");
                 return;
             }
         }

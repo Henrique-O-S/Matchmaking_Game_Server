@@ -17,6 +17,7 @@ public class User {
         LOGGING_ERROR,
         AUTHENTICATED,
         WAITING_QUEUE,
+        PLAYING,
         DISCONNECTED
     }
 
@@ -65,6 +66,10 @@ public class User {
 
     public void setSocketChannel(SocketChannel channel){
         this.channel = channel;
+    }
+
+    public SocketChannel getSocketChannel(){
+        return this.channel;
     }
 
 }
