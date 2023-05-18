@@ -9,7 +9,7 @@ public class Game implements Runnable {
     private List<User> players;
     private int num_players;
     private int[] player_scores;
-    ByteBuffer buffer;
+    private ByteBuffer buffer;
 
     public Game(List<User> players) {
         this.players = players;
@@ -72,10 +72,10 @@ public class Game implements Runnable {
         SocketChannel player_channel = this.players.get(player).getClientChannel();
 
         while (true) {
-            buffer.clear();
-            int bytesRead = player_channel.read(buffer);
-            String message = new String(buffer.array(), 0, bytesRead).trim();
-            buffer.flip();
+            this.buffer.clear();
+            int bytes_read = player_channel.read(this.buffer);
+            String message = new String(this.buffer.array(), 0, bytes_read).trim();
+            this.buffer.flip();
             
             int play = Integer.parseInt(message);
             if (play >= 1 && play <= 12) {

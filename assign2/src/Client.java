@@ -1,6 +1,7 @@
 import java.util.*;
 import java.io.IOException;
 import java.nio.channels.*;
+import java.nio.ByteBuffer;
 import java.net.InetSocketAddress;
 
 public class Client {
@@ -9,6 +10,7 @@ public class Client {
 
     private SocketChannel channel;
     private User user;
+    private ByteBuffer buffer;
     private Scanner scanner;
 
     public static void main(String[] args) throws IOException {
@@ -17,6 +19,7 @@ public class Client {
     }
 
     public Client() {
+        this.buffer = ByteBuffer.allocate(1024);
         this.scanner = new Scanner(System.in);
     }
 
@@ -26,6 +29,43 @@ public class Client {
             this.channel.connect(new InetSocketAddress(PORT));
 
             this.user = new User("default");
+            String message = "";
+            Boolean playing = true;
+
+            while (playing) {
+                message = this.readMessage();
+                System.out.println("SERVER" + "-" + message);
+                
+                String[] split_message = message.split("-");
+                String identifier = split_message[0];
+
+                switch (identifier) {
+                    case "INFO":
+                        System.out.println(message);
+                        this.buffer.clear();
+                        this.buffer.put("OK".getBytes());
+                        this.buffer.flip();
+                        this.channel.write(this.buffer);
+                        break;
+                    case "PLAY":
+                        System.out.println(message);
+                        this.play();
+                        break;
+                    case "EXIT":
+                        System.out.println("Your updated score is " + user.getGlobalScore());
+                        System.out.println("Exiting back to the queue");
+                        this.buffer.clear();
+                        this.buffer.put("OK".getBytes());
+                        this.buffer.flip();
+                        this.channel.write(this.buffer);
+                        // user to queue
+                        playing = false;
+                        break;
+                    default:
+                        System.out.println("Invalid message from server");
+                        break;
+                }
+            }
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -40,9 +80,59 @@ public class Client {
         this.user = user;
     }
 
-    private String[] readInput(){
+    public String readMessage() throws IOException {
+        this.buffer.clear();
+        int bytes_read = this.channel.read(this.buffer);
+        this.buffer.flip();
+
+        if (bytes_read >= 0)
+            return new String(buffer.array(), 0, bytes_read).trim();
+
+        return "error";
+    }
+
+    private String[] readInput() {
         String input = this.scanner.nextLine();
         return input.split("\\s+");
     }
 
+    private void play() {
+        Timer timer = new Timer();
+        TimerTask timeoutTask = new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("\nTimeout reached. Playing automatically...");
+
+                Random random = new Random();
+                int play = random.nextInt(12) + 1;
+
+                buffer.clear();
+                buffer.put(Integer.toString(play).getBytes());
+                buffer.flip();
+                try {
+                    channel.write(buffer);
+                } 
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        timer.schedule(timeoutTask, TIMEOUT);             
+        this.scanner.nextLine(); // wait for user to press Enter
+        timer.cancel(); // cancel the timeout task    
+
+        // continue with the rest of the program
+        Random random = new Random();
+        int play = random.nextInt(12) + 1;
+        buffer.clear();
+        buffer.put(Integer.toString(play).getBytes());
+        buffer.flip();
+        try {
+            channel.write(buffer);
+        } 
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
