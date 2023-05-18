@@ -31,7 +31,7 @@ class Database {
                 return false;
             }
         }
-        User newUser = new User(userData[0], userData[1], 0);
+        User newUser = new User(userData[0], userData[1], 1000);
         users.add(newUser);
         appendToFile(newUser);
         return true;

@@ -110,7 +110,7 @@ public class Client {
                     buffer.flip();
                     String response = new String(buffer.array(), 0, buffer.limit()).trim();
                     if (response.equals("Connection Established")) {
-                        System.out.println("'R' to REGISTER, 'L' to LOGIN, or 'Q' to QUIT (at anytime)");
+                        System.out.println("'R' to REGISTER, 'L' to LOGIN, or '^C' to QUIT (at anytime)");
                         data = readInput();
                         if (data[0].toLowerCase().equals("r")) {
                             message = sendMessageReceiveResponse(data[0]);
