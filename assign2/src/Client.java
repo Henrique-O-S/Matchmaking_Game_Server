@@ -28,24 +28,21 @@ public class Client {
             this.channel = SocketChannel.open();
             this.channel.connect(new InetSocketAddress(PORT));
 
-            this.user = new User("default");
+            this.user = new User();
             String message = "";
             Boolean playing = true;
 
             while (playing) {
                 message = this.readMessage();
                 System.out.println("SERVER" + "-" + message);
-                
+
                 String[] split_message = message.split("-");
                 String identifier = split_message[0];
 
                 switch (identifier) {
                     case "INFO":
                         System.out.println(message);
-                        this.buffer.clear();
-                        this.buffer.put("OK".getBytes());
-                        this.buffer.flip();
-                        this.channel.write(this.buffer);
+                        this.writeMessage("OK");
                         break;
                     case "PLAY":
                         System.out.println(message);
@@ -54,10 +51,7 @@ public class Client {
                     case "EXIT":
                         System.out.println("Your updated score is " + user.getGlobalScore());
                         System.out.println("Exiting back to the queue");
-                        this.buffer.clear();
-                        this.buffer.put("OK".getBytes());
-                        this.buffer.flip();
-                        this.channel.write(this.buffer);
+                        this.writeMessage("OK");
                         // user to queue
                         playing = false;
                         break;
@@ -89,6 +83,14 @@ public class Client {
             return new String(buffer.array(), 0, bytes_read).trim();
 
         return "error";
+    }
+
+    public void writeMessage(String message) throws IOException {
+        this.buffer.clear();
+        this.buffer.put(message.getBytes());
+        this.buffer.flip();
+        
+        this.channel.write(this.buffer);
     }
 
     private String[] readInput() {

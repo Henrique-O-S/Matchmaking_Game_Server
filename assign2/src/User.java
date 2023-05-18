@@ -1,13 +1,15 @@
 import java.nio.channels.*;
 
 public class User {
-    private String username = "";
-    private String password = "";
+    private String username;
+    private String password;
     private int global_score;
     private SocketChannel client_channel;
 
-    public User(String username) {
-        this.username = username;
+    public User() {
+        this.username = "";
+        this.password = "";
+        this.global_score = 0;
     }
 
     public User(String username, String password, int global_score, SocketChannel client_channel) {
