@@ -2,10 +2,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 import java.net.InetSocketAddress;
 
@@ -13,11 +16,29 @@ public class Server {
     private static final int PORT = 5002;
     private static final int MAX_CLIENTS = 3;
 
+    private static final int TOKEN_BYTE_NUMBER = 10;
+
     private Selector selector;
     private List<Client> clients;
     private ExecutorService executor;
     private Database database;
     private List<User> users;
+
+    private SignalHandler handler = new SignalHandler() {
+        public void handle(Signal signal) {
+            System.out.println("\nCLOSING...");
+            try {
+                for(Client client : clients){
+                    client.getChannel().close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("\nSERVER CLOSED\n");
+                System.exit(0);
+            }
+        }
+    };
 
     private ByteBuffer buffer = ByteBuffer.allocate(1024);
 
@@ -34,6 +55,7 @@ public class Server {
 
     public void start() {
         try {
+            Signal.handle(new Signal("INT"), handler);
             selector = Selector.open();
             ServerSocketChannel serverChannel = ServerSocketChannel.open();
             serverChannel.bind(new InetSocketAddress(PORT));
@@ -120,6 +142,9 @@ public class Server {
 
         
         channel.register(selector, SelectionKey.OP_WRITE, user);
+
+        channel.register(selector, SelectionKey.OP_WRITE, user);
+
         System.out.println("Client connected: " + channel.getRemoteAddress());
     }
 
@@ -283,5 +308,14 @@ public class Server {
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
+    }
+
+    private byte[] getRandomBytes() {
+        byte[] bytes = new byte[TOKEN_BYTE_NUMBER];
+
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.nextBytes(bytes);
+
+        return bytes;
     }
 }
