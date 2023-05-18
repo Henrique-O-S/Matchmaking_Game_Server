@@ -28,16 +28,18 @@ public class Server {
         try {
             ServerSocketChannel server_channel = ServerSocketChannel.open();
             server_channel.bind(new InetSocketAddress(PORT));
+            System.out.println("Server is listening on port " + PORT);
             server_channel.configureBlocking(false);
+
+            // thread pool
+            ExecutorService executor = Executors.newFixedThreadPool(MAX_CLIENTS);
 
             this.selector = Selector.open();
             server_channel.register(this.selector, SelectionKey.OP_ACCEPT);
 
-            System.out.println("Server is listening on port " + PORT);
-
             while (true) {
                 this.selector.select(1000);
-
+                
                 Set<SelectionKey> selectedKeys = this.selector.selectedKeys();
                 Iterator<SelectionKey> iterator = selectedKeys.iterator();
 
@@ -52,13 +54,17 @@ public class Server {
                     } else if (key.isWritable()) {
                         this.keyWrite(key);
                     }
+                }
 
-                    // start game
-                    if (this.users.size() == MAX_CLIENTS) {
-                        ExecutorService executor = Executors.newFixedThreadPool(MAX_CLIENTS);
-                        Game game = new Game(this.users);
-                        executor.submit(game);
-                    }
+                // start game
+                if (this.users.size() == MAX_CLIENTS) {
+                    for (User user : this.users) {
+                        SelectionKey key = user.getClientChannel().keyFor(selector);
+                        if (key != null)
+                            key.cancel();
+                    }   
+                    Game game = new Game(this.users);
+                    executor.submit(game);
                 }
             }
         }
