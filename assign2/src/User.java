@@ -16,7 +16,7 @@ public class User {
         LOGGING,
         LOGGING_ERROR,
         AUTHENTICATED,
-        WAITING_QUEUE,
+        QUEUE,
         PLAYING,
         DISCONNECTED
     }

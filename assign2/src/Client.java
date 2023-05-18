@@ -8,21 +8,23 @@ import java.util.TimerTask;
 import java.util.Random;
 
 public class Client {
-    private SocketChannel channel;
-
-    private User user;
-
-    private Scanner scanner;
-
     private static final int PORT = 5002;
-
     private static final int TIMEOUT = 5000;
 
+    private SocketChannel channel;
+    private User user;
+    private Scanner scanner;
     private ByteBuffer buffer = ByteBuffer.allocate(1024);
 
     public Client(SocketChannel channel) {
         this.channel = channel;
         this.scanner = new Scanner(System.in);
+    }
+
+    public static void main(String[] args) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(PORT));
+        new Client(channel).start();
     }
 
     public void setUser(User user) {
@@ -141,6 +143,21 @@ public class Client {
                     break;
                 }
                 case AUTHENTICATED: {
+                    this.user.setState(User.State.QUEUE);
+                }
+                case QUEUE: {
+                    message = readMessage();
+                    System.out.println("SERVER" + "-" + message);
+                    String[] splitMessage = message.split("-");
+                    String identifier = splitMessage[0];
+                    if (identifier.equals("INFO")) {
+                        System.out.println(message);
+                        buffer.clear();
+                        buffer.put("OK".getBytes());
+                        buffer.flip();
+                        channel.write(buffer);
+                        this.user.setState(User.State.PLAYING);
+                    }
                 }
                 case PLAYING: {
                     while(true){
@@ -190,31 +207,24 @@ public class Client {
                           
                         }else if(identifier.equals("EXIT")){
                             System.out.println("Your updated score is " + user.getScore());
-                            System.out.println("Exiting back to waiting queue");
+                            System.out.println("Exiting back to wait queue");
                             buffer.clear();
                             buffer.put("OK".getBytes());
                             buffer.flip();
                             channel.write(buffer);
-                            user.setState(User.State.WAITING_QUEUE);
+                            user.setState(User.State.QUEUE);
                             break;
                         }
 
                         
                     }
                 }
-
             }
         }
 
         System.out.println("GOOD BYE!");
 
         channel.close();
-    }
-
-    public static void main(String[] args) throws IOException {
-        SocketChannel channel = SocketChannel.open();
-        channel.connect(new InetSocketAddress(PORT));
-        new Client(channel).start();
     }
 
     private String[] readInput(){

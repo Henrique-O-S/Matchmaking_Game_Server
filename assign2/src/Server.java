@@ -17,15 +17,19 @@ public class Server {
     private List<Client> clients;
     private ExecutorService executor;
     private Database database;
-    private ArrayList<User> users;
+    private List<User> users;
 
     private ByteBuffer buffer = ByteBuffer.allocate(1024);
-
 
     public Server() throws FileNotFoundException, IOException {
         clients = new ArrayList<>();
         executor = Executors.newFixedThreadPool(MAX_CLIENTS);
         database = new Database("data/users.txt");
+    }
+
+    public static void main(String[] args) throws FileNotFoundException, IOException {
+        Server server = new Server();
+        server.start();
     }
 
     public void start() {
@@ -59,8 +63,36 @@ public class Server {
                     }
                 }
 
-                //Game game = new Game(this.clients);
-                //executor.submit(game);
+                int users_ready = 0;
+                boolean new_game = false;
+                for (User user : users) {
+                    if (user.getState() == User.State.QUEUE) {
+                        users_ready++;
+                        if (users_ready == MAX_CLIENTS) {
+                            new_game = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (new_game) {
+                    List<User> game_users = new ArrayList<>();
+                    for (User user : users) {
+                        if (users_ready == 0)
+                            break;
+                        else if (user.getState() == User.State.QUEUE) {
+                            user.setState(User.State.PLAYING);
+                            game_users.add(user);
+                            users_ready--;
+                            SelectionKey key = user.getSocketChannel().keyFor(selector);
+                            if (key != null)
+                                key.cancel();
+                        }
+                    }
+
+                    Game game = new Game(game_users);
+                    executor.submit(game);
+                }
             }
         } catch (IOException ex) {
             System.err.println("Server exception: " + ex.getMessage());
@@ -177,11 +209,12 @@ public class Server {
                 break;
             }
             case AUTHENTICATED:{
+                user.setState(User.State.QUEUE);
                 break;
             }
 
         }
-        if(!user.getState().equals(User.State.WAITING_QUEUE))
+        if(!user.getState().equals(User.State.QUEUE))
         {
             key.interestOps(SelectionKey.OP_WRITE);
         }
@@ -217,31 +250,16 @@ public class Server {
                 sendMessage(clientChannel, "OK");
                 break;
             }
-
+            case QUEUE: {
+                sendMessage(clientChannel, "OK");
+                break;
+            }
         }
-        if(!user.getState().equals(User.State.WAITING_QUEUE))
+        if(!user.getState().equals(User.State.QUEUE))
         {
             key.interestOps(SelectionKey.OP_READ);
         }
     }
-
-    /* private void handleGameLogic(Client currentClient, String message) {
-        // Process game logic based on the received message
-        // In this example, assume the message is the client's play
-        int play = Integer.parseInt(message);
-
-        // Perform game logic and update client's score, etc.
-
-        executor.execute(() -> {
-            try {
-                // Send game result back to the client
-                currentClient.sendMessage("Game result: ...");
-            } catch (IOException e) {
-                System.err.println("Error sending message to client: " + e.getMessage());
-                // Handle the exception accordingly
-            }
-        });
-    } */
 
     private Client findClientByChannel(SocketChannel clientChannel) {
         for (Client client : clients)
@@ -251,11 +269,6 @@ public class Server {
         return null;
     }
 
-    public static void main(String[] args) throws FileNotFoundException, IOException {
-        Server server = new Server();
-        server.start();
-    }
-
     private void sendMessage(SocketChannel channel, String message) throws IOException{
         ByteBuffer buffer = ByteBuffer.allocate(1024);
 
@@ -263,7 +276,5 @@ public class Server {
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
-
-
     }
 }

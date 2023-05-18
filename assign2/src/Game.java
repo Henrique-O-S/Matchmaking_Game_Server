@@ -21,9 +21,9 @@ public class Game implements Runnable {
     @Override
     public void run() {
         //STARTING GAME
-        System.out.println("\nStarting game with " + this.numPlayers + " players\n");
+        System.out.println("\nStarting game\n");
         try {
-            sendToAllUsers(players, "INFO" + "-" + "Starting game with " + this.numPlayers + " players\n");
+            sendToAllUsers(players, "INFO" + "-" + "Starting game\n");
 
             readConfirmationFromUsers(players);
 

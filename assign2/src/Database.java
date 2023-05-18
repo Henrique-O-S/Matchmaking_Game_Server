@@ -1,10 +1,10 @@
 import java.io.*;
-import java.util.ArrayList;
+import java.util.*;
 
 class Database {
 
     private String filename;
-    private ArrayList<User> users;
+    private List<User> users;
     public Database(String filename) throws FileNotFoundException, IOException {
         this.filename = filename;
         this.loadUsers();
@@ -21,7 +21,7 @@ class Database {
         }    
     }
 
-    public ArrayList<User> getUsers() {
+    public List<User> getUsers() {
         return users;
     }
 
