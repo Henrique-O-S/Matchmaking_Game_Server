@@ -8,11 +8,13 @@ import java.util.concurrent.Executors;
 
 public class Server {
     private static final int PORT = 5000;
-    private static final int MAX_CLIENTS = 3;
+    private static final int QUEUE_LIMIT = 10;
+    private static final int MAX_GAMES = 2;
+    private static final int GAME_CLIENTS = 1;
 
     private Selector selector;
     private ByteBuffer buffer;
-    private List<User> users;
+    private Queue<User> queue;
 
     public static void main(String[] args) {
         Server server = new Server();
@@ -21,7 +23,7 @@ public class Server {
 
     public Server() {
         this.buffer = ByteBuffer.allocate(1024);
-        this.users = new ArrayList<User>();
+        this.queue = new LinkedList<User>();
     }
 
     private void launch() {
@@ -32,12 +34,11 @@ public class Server {
             server_channel.configureBlocking(false);
 
             // thread pool
-            ExecutorService executor = Executors.newFixedThreadPool(MAX_CLIENTS);
+            ExecutorService executor = Executors.newFixedThreadPool(MAX_GAMES);
 
             this.selector = Selector.open();
             server_channel.register(this.selector, SelectionKey.OP_ACCEPT);
 
-            boolean game_started = false;
             while (true) {
                 this.selector.select(1000);
                 
@@ -48,27 +49,42 @@ public class Server {
                     SelectionKey key = iterator.next();
                     iterator.remove();
 
-                    if (key.isAcceptable()) {
+                    if (!key.isValid())
+                        key.cancel();
+                    else if (key.isAcceptable())
                         this.keyAccept(key);
-                    } else if (key.isReadable()) {
+                    else if (key.isReadable())
                         this.keyRead(key);
-                    } else if (key.isWritable()) {
+                    else if (key.isWritable())
                         this.keyWrite(key);
-                    }
                 }
 
-                // start game
-                if (!game_started && this.users.size() == MAX_CLIENTS) {
-                    game_started = true;
+                if (this.queue.size() >= GAME_CLIENTS) {
+                    List<User> users = new ArrayList<User>();
+                    while (users.size() < GAME_CLIENTS)
+                        users.add(this.queue.poll());
 
-                    for (User user : this.users) {
+                    for (User user : users) {
                         SelectionKey key = user.getClientChannel().keyFor(selector);
                         if (key != null)
                             key.cancel();
                     }   
 
-                    Game game = new Game(this.users);
+                    // start new game
+                    Game game = new Game(users);
                     executor.submit(game);
+
+                    // game over
+                    if (game.over()) {
+                        for (User user : users) {
+                            this.queue.add(user);
+                            SocketChannel client_channel = user.getClientChannel();
+                            client_channel.configureBlocking(false);
+                            client_channel.register(selector, SelectionKey.OP_READ, user);
+                        }
+
+                        users.clear();
+                    }
                 }
             }
         }
@@ -88,7 +104,9 @@ public class Server {
 
         client_channel.register(this.selector, SelectionKey.OP_WRITE, user);
         System.out.println("New client connected from: " + client_channel.getRemoteAddress());
-        this.users.add(user);
+
+        if (this.queue.size() <= QUEUE_LIMIT)
+            this.queue.add(user);
     }
 
     private void keyRead(SelectionKey key) throws IOException {

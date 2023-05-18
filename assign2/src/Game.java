@@ -6,18 +6,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CompletableFuture;
 
 public class Game implements Runnable {
-    private static final int ROUNDS = 5;
+    private static final int ROUNDS = 2;
 
     private List<User> players;
     private int num_players;
     private int[] player_scores;
     private ByteBuffer buffer;
+    private boolean game_over;
 
     public Game(List<User> players) {
         this.players = players;
         this.num_players = players.size();
         this.player_scores = new int[this.num_players];
         this.buffer = ByteBuffer.allocate(1024);
+        this.game_over = false;
 
         // initialize scores
         for (int i = 0; i < this.num_players; i++)
@@ -71,6 +73,8 @@ public class Game implements Runnable {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+
+        this.game_over = true;
     }
 
     private void playRound(int round) {
@@ -192,5 +196,9 @@ public class Game implements Runnable {
                 winners.add(players.get(player));
 
         return winners;
+    }
+
+    public boolean over() {
+        return this.game_over;
     }
 }
