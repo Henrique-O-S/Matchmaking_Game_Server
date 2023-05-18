@@ -1,75 +1,51 @@
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 
 public class User {
-
     private String username = "";
     private String password = "";
-    private Integer globalScore;
-    private SocketChannel channel;
-
-    private State state;
-
-    public enum State{
-        CONNECTED,
-        REGISTERING,
-        REGISTERING_ERROR,
-        LOGGING,
-        LOGGING_ERROR,
-        AUTHENTICATED,
-        QUEUE,
-        PLAYING,
-        DISCONNECTED
-    }
+    private int global_score;
+    private SocketChannel client_channel;
 
     public User(String username) {
         this.username = username;
-        this.state = State.CONNECTED;
     }
-    public User(String username, String password, Integer score) {
+
+    public User(String username, String password, int global_score, SocketChannel client_channel) {
         this.username = username;
         this.password = password;
-        this.globalScore = score;
-        this.state = State.CONNECTED;
+        this.global_score = global_score;
+        this.client_channel = client_channel;
     }
 
-    public void setUsername(String username){
-        this.username = username;
-    }
-
-    public void setPassword(String password){
-        this.password = password;
-    }
-
-    public void setScore(Integer score){
-        this.globalScore = score;
-    }
-
-    public String getUsername(){
+    public String getUsername() {
         return this.username;
     }
 
-    public String getPassword(){
+    public String getPassword() {
         return this.password;
     }
 
-    public Integer getScore(){
-        return this.globalScore;
+    public int getGlobalScore() {
+        return this.global_score;
     }
 
-    public State getState(){
-        return state;
+    public SocketChannel getClientChannel() {
+        return this.client_channel;
     }
 
-    public void setState(State state){
-        this.state = state;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public void setSocketChannel(SocketChannel channel){
-        this.channel = channel;
+    public void setPassword(String password) {
+        this.password= password;
     }
 
-    public SocketChannel getSocketChannel(){
-        return this.channel;
+    public void setGlobalScore(int global_score) {
+        this.global_score = global_score;
     }
 
+    public void setClientChannel(SocketChannel client_channel) {
+        this.client_channel = client_channel;
+    }
 }
