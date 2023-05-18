@@ -2,6 +2,8 @@ import java.util.*;
 import java.io.IOException;
 import java.nio.channels.*;
 import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 
 public class Game implements Runnable {
     private static final int ROUNDS = 5;
@@ -157,20 +159,26 @@ public class Game implements Runnable {
     }
 
     private void messageDelivered() throws IOException, InterruptedException {
-        int ends = 0;
-        while (ends < this.num_players) {
-            for (User player : this.players) {
-                while (true) {
-                    if (this.readMessage(player.getClientChannel()).equals("OK")) {
-                        ends++;
-                        break;
-                    }
+        CountDownLatch latch = new CountDownLatch(this.num_players);
+
+        for (User player : this.players) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    while (true)
+                        if (readMessage(player.getClientChannel()).equals("OK"))
+                            break;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    latch.countDown();
                 }
-            }
+            });
         }
 
+        latch.await(); // wait until the latch count reaches zero
         Thread.sleep(1000);
     }
+
 
     private List<User> getWinners() {
         List<User> winners = new ArrayList<>();

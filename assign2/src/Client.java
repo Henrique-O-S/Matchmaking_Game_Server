@@ -42,6 +42,7 @@ public class Client {
                 switch (identifier) {
                     case "[INFO":
                         this.writeMessage("OK");
+                        System.out.println("OK");
                         break;
                     case "[PLAY":
                         this.play();
@@ -50,6 +51,7 @@ public class Client {
                         System.out.println("Your updated score is " + user.getGlobalScore());
                         System.out.println("Exiting back to the queue");
                         this.writeMessage("OK");
+                        System.out.println("OK");
                         // user to queue
                         playing = false;
                         break;

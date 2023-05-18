@@ -37,6 +37,7 @@ public class Server {
             this.selector = Selector.open();
             server_channel.register(this.selector, SelectionKey.OP_ACCEPT);
 
+            boolean game_started = false;
             while (true) {
                 this.selector.select(1000);
                 
@@ -57,12 +58,15 @@ public class Server {
                 }
 
                 // start game
-                if (this.users.size() == MAX_CLIENTS) {
+                if (!game_started && this.users.size() == MAX_CLIENTS) {
+                    game_started = true;
+
                     for (User user : this.users) {
                         SelectionKey key = user.getClientChannel().keyFor(selector);
                         if (key != null)
                             key.cancel();
                     }   
+
                     Game game = new Game(this.users);
                     executor.submit(game);
                 }
