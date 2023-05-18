@@ -7,6 +7,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Random;
 
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
+
+
 public class Client {
     private static final int PORT = 5002;
     private static final int TIMEOUT = 5000;
@@ -16,15 +20,29 @@ public class Client {
     private Scanner scanner;
     private ByteBuffer buffer = ByteBuffer.allocate(1024);
 
+    private SignalHandler handler = new SignalHandler() {
+        public void handle(Signal signal) {
+            System.out.println("\nDISCONNECTING...");
+            try {
+                sendMessage("q");
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("\nGOOD BYE\n");
+                System.exit(0);
+            }
+        }
+    };
+
     public Client(SocketChannel channel) {
         this.channel = channel;
         this.scanner = new Scanner(System.in);
     }
 
     public static void main(String[] args) throws IOException {
-        SocketChannel channel = SocketChannel.open();
-        channel.connect(new InetSocketAddress(PORT));
-        new Client(channel).start();
+            SocketChannel channel = SocketChannel.open();
+            channel.connect(new InetSocketAddress(PORT));
+            new Client(channel).start();
     }
 
     public void setUser(User user) {
@@ -57,6 +75,17 @@ public class Client {
         return "error";
     }
 
+    public void sendMessage(String message) throws IOException {
+        buffer.clear();
+        buffer.put(message.getBytes());
+
+        buffer.flip();
+        channel.write(buffer);
+
+        buffer.clear();
+    }
+
+
     public String readMessage() throws IOException {
         buffer.clear();
         int bytesRead = channel.read(buffer);
@@ -71,7 +100,9 @@ public class Client {
         this.user = new User("Default");
         String message;
         String data[];
-        while (this.user.getState() != User.State.DISCONNECTED) {
+        Signal.handle(new Signal("INT"), handler);
+
+        while (true) {
             switch (this.user.getState()) {
                 case CONNECTED: {
                     buffer.clear();
@@ -79,7 +110,7 @@ public class Client {
                     buffer.flip();
                     String response = new String(buffer.array(), 0, buffer.limit()).trim();
                     if (response.equals("Connection Established")) {
-                        System.out.println("'R' to REGISTER, 'L' to LOGIN, or 'Q' to QUIT");
+                        System.out.println("'R' to REGISTER, 'L' to LOGIN, or 'Q' to QUIT (at anytime)");
                         data = readInput();
                         if (data[0].toLowerCase().equals("r")) {
                             message = sendMessageReceiveResponse(data[0]);
@@ -221,10 +252,6 @@ public class Client {
                 }
             }
         }
-
-        System.out.println("GOOD BYE!");
-
-        channel.close();
     }
 
     private String[] readInput(){

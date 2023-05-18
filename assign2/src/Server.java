@@ -102,18 +102,22 @@ public class Server {
     private void disconnectClient(SocketChannel channel) throws IOException{
         Client client = findClientByChannel(channel);
         clients.remove(client);
-        channel.close();
         System.out.println("Client disconnected: " + channel.getRemoteAddress());
+        channel.close();
     }
 
     private void handleAccept(SelectionKey key) throws IOException {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel channel = serverChannel.accept();
         channel.configureBlocking(false);
-    
+        
         User user = new User("default");
         user.setState(User.State.CONNECTED);
         user.setSocketChannel(channel);
+
+        Client newClient = new Client(channel);
+        clients.add(newClient);
+
         
         channel.register(selector, SelectionKey.OP_WRITE, user);
         System.out.println("Client connected: " + channel.getRemoteAddress());
@@ -163,6 +167,8 @@ public class Server {
                     user.setPassword(data[1]);
                     user.setScore(0);
                     user.setState(User.State.AUTHENTICATED);
+
+                    System.out.println("User " + user.getUsername() + " has connected from client " + clientChannel.getRemoteAddress());
                 }
                 else{
                     user.setState(User.State.REGISTERING_ERROR);
@@ -191,6 +197,7 @@ public class Server {
                     user.setPassword(user2.getPassword());
                     user.setScore(user2.getScore());
                     user.setState(User.State.AUTHENTICATED);
+                    System.out.println("User " + user.getUsername() + " has connected from client " + clientChannel.getRemoteAddress());
                 }
                 else{
                     user.setState(User.State.LOGGING_ERROR);
