@@ -30,7 +30,7 @@ public class Game implements Runnable {
         try {
             for (User player : this.players)
                 this.writeMessage(player.getClientChannel(), "[INFO] Game started");
-            this.messageDelivered();
+            this.getFeedback(false);
         }
         catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -50,7 +50,7 @@ public class Game implements Runnable {
         try {
             for (User player : this.players)
                 this.writeMessage(player.getClientChannel(), "[INFO] " + s);
-            this.messageDelivered();
+            this.getFeedback(false);
         } 
         catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -67,7 +67,7 @@ public class Game implements Runnable {
         try {
             for (User player : this.players)
                 this.writeMessage(player.getClientChannel(), "[EXIT] Game ended");
-            this.messageDelivered();
+            this.getFeedback(false);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
@@ -78,20 +78,23 @@ public class Game implements Runnable {
         try {
             for (User player : this.players)
                 this.writeMessage(player.getClientChannel(), "[INFO] Round " + round);
-            this.messageDelivered();
+            this.getFeedback(false);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
-        int[] round_scores = new int[this.num_players];
-        for (int player = 0; player < this.num_players; player++) {
-            try {
-                round_scores[player] = this.getPlay(player);
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[PLAY] Press ENTER to roll the dice");
+            this.getFeedback(true);
         }
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        int[] round_scores = new int[this.num_players];
+        for (int player = 0; player < this.num_players; player++)
+            round_scores[player] = this.players.get(player).currentPlay();
 
         int highscore = round_scores[0];
         List<User> winners = new ArrayList<>();
@@ -113,31 +116,12 @@ public class Game implements Runnable {
         try {
             for (User player : this.players)
                 this.writeMessage(player.getClientChannel(), "[INFO] " + s);
-            this.messageDelivered();
+            this.getFeedback(false);
         } 
         catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     } 
-
-    private int getPlay(int player) throws IOException {
-        this.writeMessage(this.players.get(player).getClientChannel(), "[PLAY] Press ENTER to roll the dice");
-
-        SocketChannel player_channel = this.players.get(player).getClientChannel();
-
-        while (true) {
-            this.buffer.clear();
-            int bytes_read = player_channel.read(this.buffer);
-            String message = new String(this.buffer.array(), 0, bytes_read).trim();
-            this.buffer.flip();
-            
-            int play = Integer.parseInt(message);
-            if (play >= 1 && play <= 12) {
-                System.out.println("Player " + player + " got " + play);
-                return play;
-            }
-        }
-    }
 
     private String readMessage(SocketChannel channel) throws IOException {
         this.buffer.clear();
@@ -158,18 +142,34 @@ public class Game implements Runnable {
         channel.write(this.buffer);
     }
 
-    private void messageDelivered() throws IOException, InterruptedException {
+    private void getFeedback(boolean playing) throws IOException, InterruptedException {
         CountDownLatch latch = new CountDownLatch(this.num_players);
-
         for (User player : this.players) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    while (true)
-                        if (readMessage(player.getClientChannel()).equals("OK"))
-                            break;
-                } catch (IOException e) {
+                    while (true) {
+                        if (!playing) {
+                            if (readMessage(player.getClientChannel()).equals("received"))
+                                break;
+                        }
+                        else {
+                            String message = this.readMessage(player.getClientChannel());
+                            String[] split_message = message.split("]");
+                            String identifier = split_message[0];
+
+                            if (identifier.equals("[PLAY")) {
+                                int play = Integer.parseInt(split_message[1].trim());
+                                player.setPlay(play);
+                                System.out.println("Player " + player.getUsername() + " got " + play);
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch (IOException e) {
                     e.printStackTrace();
-                } finally {
+                }
+                finally {
                     latch.countDown();
                 }
             });
@@ -178,7 +178,6 @@ public class Game implements Runnable {
         latch.await(); // wait until the latch count reaches zero
         Thread.sleep(1000);
     }
-
 
     private List<User> getWinners() {
         List<User> winners = new ArrayList<>();

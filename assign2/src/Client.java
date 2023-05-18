@@ -6,7 +6,7 @@ import java.net.InetSocketAddress;
 
 public class Client {
     private static final int PORT = 5000;
-    private static final int TIMEOUT = 5000;
+    private static final int TIMEOUT = 10000;
 
     private SocketChannel channel;
     private User user;
@@ -41,17 +41,15 @@ public class Client {
 
                 switch (identifier) {
                     case "[INFO":
-                        this.writeMessage("OK");
-                        System.out.println("OK");
+                        this.writeMessage("received");
                         break;
                     case "[PLAY":
                         this.play();
                         break;
                     case "[EXIT":
                         System.out.println("Your updated score is " + user.getGlobalScore());
-                        System.out.println("Exiting back to the queue");
-                        this.writeMessage("OK");
-                        System.out.println("OK");
+                        System.out.println("Returning to queue");
+                        this.writeMessage("received");
                         // user to queue
                         playing = false;
                         break;
@@ -104,31 +102,25 @@ public class Client {
             @Override
             public void run() {
                 System.out.println("\nTimeout reached. Playing automatically...");
-
-                Random random = new Random();
-                int play = random.nextInt(12) + 1;
-
-                buffer.clear();
-                buffer.put(Integer.toString(play).getBytes());
-                buffer.flip();
-                try {
-                    channel.write(buffer);
-                } 
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
+                rollDice();
             }
         };
 
         timer.schedule(timeoutTask, TIMEOUT);             
-        this.scanner.nextLine(); // wait for user to press Enter
+        this.scanner.nextLine(); // wait for user to press Enter key
         timer.cancel(); // cancel the timeout task    
 
         // continue with the rest of the program
+        rollDice();
+    }
+
+    private void rollDice() {
         Random random = new Random();
         int play = random.nextInt(12) + 1;
+        String message = "[PLAY] " + Integer.toString(play);
+
         buffer.clear();
-        buffer.put(Integer.toString(play).getBytes());
+        buffer.put(message.getBytes());
         buffer.flip();
         try {
             channel.write(buffer);

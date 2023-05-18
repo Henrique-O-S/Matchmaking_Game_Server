@@ -5,11 +5,13 @@ public class User {
     private String password;
     private int global_score;
     private SocketChannel client_channel;
+    private int curr_play;
 
     public User() {
         this.username = "";
         this.password = "";
         this.global_score = 0;
+        this.curr_play = 0;
     }
 
     public User(String username, String password, SocketChannel client_channel) {
@@ -17,6 +19,7 @@ public class User {
         this.password = password;
         this.global_score = 0;
         this.client_channel = client_channel;
+        this.curr_play = 0;
     }
 
     public String getUsername() {
@@ -33,6 +36,10 @@ public class User {
 
     public SocketChannel getClientChannel() {
         return this.client_channel;
+    }
+
+    public int currentPlay() {
+        return this.curr_play;
     }
 
     public void setUsername(String username) {
@@ -56,5 +63,9 @@ public class User {
 
     public void setClientChannel(SocketChannel client_channel) {
         this.client_channel = client_channel;
+    }
+
+    public void setPlay(int value) {
+        this.curr_play = value;
     }
 }
