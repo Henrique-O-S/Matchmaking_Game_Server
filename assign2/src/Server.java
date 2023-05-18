@@ -54,9 +54,11 @@ public class Server {
                     }
 
                     // start game
-                    ExecutorService executor = Executors.newFixedThreadPool(MAX_CLIENTS);
-                    Game game = new Game(this.users);
-                    executor.submit(game);
+                    if (this.users.size() == MAX_CLIENTS) {
+                        ExecutorService executor = Executors.newFixedThreadPool(MAX_CLIENTS);
+                        Game game = new Game(this.users);
+                        executor.submit(game);
+                    }
                 }
             }
         }
@@ -76,7 +78,6 @@ public class Server {
 
         client_channel.register(this.selector, SelectionKey.OP_WRITE, user);
         System.out.println("New client connected from: " + client_channel.getRemoteAddress());
-
         this.users.add(user);
     }
 
@@ -92,7 +93,7 @@ public class Server {
         }
         else {
             User user = (User)key.attachment();
-            String message = new String(buffer.array(), 0, bytes_read).trim();
+            String message = new String(this.buffer.array(), 0, bytes_read).trim();
 
             // to do
         }

@@ -34,21 +34,19 @@ public class Client {
 
             while (playing) {
                 message = this.readMessage();
-                System.out.println("SERVER" + "-" + message);
+                System.out.println(message);
 
-                String[] split_message = message.split("-");
+                String[] split_message = message.split("]");
                 String identifier = split_message[0];
 
                 switch (identifier) {
-                    case "INFO":
-                        System.out.println(message);
+                    case "[INFO":
                         this.writeMessage("OK");
                         break;
-                    case "PLAY":
-                        System.out.println(message);
+                    case "[PLAY":
                         this.play();
                         break;
-                    case "EXIT":
+                    case "[EXIT":
                         System.out.println("Your updated score is " + user.getGlobalScore());
                         System.out.println("Exiting back to the queue");
                         this.writeMessage("OK");
@@ -80,7 +78,7 @@ public class Client {
         this.buffer.flip();
 
         if (bytes_read >= 0)
-            return new String(buffer.array(), 0, bytes_read).trim();
+            return new String(this.buffer.array(), 0, bytes_read).trim();
 
         return "error";
     }
@@ -89,7 +87,7 @@ public class Client {
         this.buffer.clear();
         this.buffer.put(message.getBytes());
         this.buffer.flip();
-        
+
         this.channel.write(this.buffer);
     }
 

@@ -24,20 +24,62 @@ public class Game implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("[Game started]");
+        System.out.println("Game started");
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] Game started");
+            this.messageDelivered();
+        }
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
 
         for (int round = 1; round <= ROUNDS; round++)
             this.playRound(round);
             
         List<User> winners = this.getWinners();
-        String s = "";
+
+        String s = "Player(s): ";
         for(User player : winners)
             s += player.getUsername() + " ";
-        System.out.println("Player(s): " + s + "won the game!\n");
+        s += "won the game!\n";
+
+        System.out.println(s);
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] " + s);
+            this.messageDelivered();
+        } 
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // update player ranks
+        for(User player : players)
+            player.defeat();
+
+        for(User player : winners)
+            player.victory();
+
+        System.out.println("Game ended");
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[EXIT]");
+            this.messageDelivered();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void playRound(int round) {
-        System.out.println("[Round " + round + "]");
+        System.out.println("Round " + round);
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] Round " + round);
+            this.messageDelivered();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
 
         int[] round_scores = new int[this.num_players];
         for (int player = 0; player < this.num_players; player++) {
@@ -60,14 +102,24 @@ public class Game implements Runnable {
             if (round_scores[player] == highscore)
                 winners.add(players.get(player));
 
-        String s = "";
+        String s = "Player(s): ";
         for(User player : winners)
             s += player.getUsername() + " ";
-        System.out.println("Player(s): " + "won this round!\n");
+        s += "won this round!\n";
+
+        System.out.println(s);
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] " + s);
+            this.messageDelivered();
+        } 
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
     } 
 
     private int getPlay(int player) throws IOException {
-        // send user instruction to play
+        this.writeMessage(this.players.get(player).getClientChannel(), "[PLAY] Press ENTER to roll the dice");
 
         SocketChannel player_channel = this.players.get(player).getClientChannel();
 
@@ -83,6 +135,41 @@ public class Game implements Runnable {
                 return play;
             }
         }
+    }
+
+    private String readMessage(SocketChannel channel) throws IOException {
+        this.buffer.clear();
+        int bytes_read = channel.read(this.buffer);
+        this.buffer.flip();
+
+        if (bytes_read >= 0)
+            return new String(this.buffer.array(), 0, bytes_read).trim();
+
+        return "error";
+    }
+
+    private void writeMessage(SocketChannel channel, String message) throws IOException {
+        this.buffer.clear();
+        this.buffer.put(message.getBytes());
+        this.buffer.flip();
+        
+        channel.write(this.buffer);
+    }
+
+    private void messageDelivered() throws IOException, InterruptedException {
+        int ends = 0;
+        while (ends < this.num_players) {
+            for (User player : this.players) {
+                while (true) {
+                    if (this.readMessage(player.getClientChannel()).equals("OK")) {
+                        ends++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        Thread.sleep(1000);
     }
 
     private List<User> getWinners() {

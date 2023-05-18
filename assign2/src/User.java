@@ -12,10 +12,10 @@ public class User {
         this.global_score = 0;
     }
 
-    public User(String username, String password, int global_score, SocketChannel client_channel) {
+    public User(String username, String password, SocketChannel client_channel) {
         this.username = username;
         this.password = password;
-        this.global_score = global_score;
+        this.global_score = 0;
         this.client_channel = client_channel;
     }
 
@@ -43,8 +43,15 @@ public class User {
         this.password= password;
     }
 
-    public void setGlobalScore(int global_score) {
-        this.global_score = global_score;
+    public void victory() {
+        this.global_score += 120;
+    }
+
+    public void defeat() {
+        if (this.global_score < 20)
+            this.global_score = 0;
+        else
+            this.global_score -= 20;
     }
 
     public void setClientChannel(SocketChannel client_channel) {
