@@ -5,35 +5,56 @@ import java.io.IOException;
 import java.nio.channels.*;
 import java.nio.ByteBuffer;
 import java.net.InetSocketAddress;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 // ---------------------------------------------------------------------------------------------------
 
 public class Client {
-    private static final int PORT = 5000;
+    private static final int PORT = 5002;
     private static final int TIMEOUT = 10000;
 
+    private User user;
     private SocketChannel channel;
     private ByteBuffer buffer;
     private Scanner scanner;
+    private SignalHandler signal_handler;
 
 // ---------------------------------------------------------------------------------------------------
 
     public static void main(String[] args) throws IOException {
-        Client client = new Client();
-        client.launch();
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(PORT));
+
+        new Client(channel).launch();
     }
 
-    public Client() {
+    public Client(SocketChannel channel) {
+        this.user = new User();
+        this.channel = channel;
         this.buffer = ByteBuffer.allocate(1024);
         this.scanner = new Scanner(System.in);
+
+        this.signal_handler = new SignalHandler() {
+            public void handle(Signal signal) {
+                    System.out.println("\nDISCONNECTING...");
+                    try {
+                        writeMessage("q");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        System.out.println("\nGOOD BYE\n");
+                        System.exit(0);
+                    }
+                }
+            };
     }
 
 // ---------------------------------------------------------------------------------------------------
 
     private void launch() {
         try {
-            this.channel = SocketChannel.open();
-            this.channel.connect(new InetSocketAddress(PORT));
+            Signal.handle(new Signal("INT"), this.signal_handler);
 
             while (true)
                 if (!this.connect())
@@ -134,6 +155,11 @@ public class Client {
         }
 
         System.out.println("Registration complete!");
+
+        while (true) 
+            if (!this.queue())
+                break;
+        
         return true;
     }
 
@@ -155,7 +181,12 @@ public class Client {
         }
 
         System.out.println("Authentication complete");
-        return this.queue();
+
+        while (true) 
+            if (!this.queue())
+                break;
+
+        return true;
     }
 
     private boolean queue() throws IOException {
@@ -181,13 +212,12 @@ public class Client {
                     this.play();
                     break;
                 case "[EXIT":
-                    int global_score = Integer.parseInt(split_message[1].trim());
-                    System.out.println("Your updated score is " + global_score);
+                    System.out.println("Your updated score is " + this.user.getGlobalScore());
                     System.out.println("Returning to queue");
                     this.writeMessage("Message received");
                     return true;
                 default:
-                    System.out.println("Invalid message from server");
+                    System.out.println("Invalid message");
                     break;
             }
         }

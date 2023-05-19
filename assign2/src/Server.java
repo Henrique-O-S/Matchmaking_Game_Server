@@ -7,19 +7,23 @@ import java.nio.ByteBuffer;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 // ---------------------------------------------------------------------------------------------------
 
 public class Server {
-    private static final int PORT = 5000;
+    private static final int PORT = 5002;
     private static final int QUEUE_LIMIT = 5;
     private static final int MAX_GAMES = 1;
     private static final int GAME_CLIENTS = 3;
 
+    private List<Client> clients;
     private Queue<User> queue;
     private Database database;
     private Selector selector;
     private ByteBuffer buffer;
+    private SignalHandler signal_handler;
 
 // ---------------------------------------------------------------------------------------------------
 
@@ -29,9 +33,25 @@ public class Server {
     }
 
     public Server() throws FileNotFoundException, IOException {
+        this.clients = new ArrayList<Client>();
         this.queue = new LinkedList<User>();
         this.database = new Database("data/users.txt");
         this.buffer = ByteBuffer.allocate(1024);
+
+        this.signal_handler = new SignalHandler() {
+                public void handle(Signal signal) {
+                    System.out.println("\nCLOSING...");
+                    try {
+                        for (Client client : clients)
+                            client.getChannel().close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        System.out.println("\nSERVER CLOSED\n");
+                        System.exit(0);
+                    }
+                }
+            };
     }
 
 // ---------------------------------------------------------------------------------------------------
@@ -45,6 +65,9 @@ public class Server {
 
             // thread pool
             ExecutorService executor = Executors.newFixedThreadPool(MAX_GAMES);
+
+            // signal handler
+            Signal.handle(new Signal("INT"), this.signal_handler);
 
             this.selector = Selector.open();
             server_channel.register(this.selector, SelectionKey.OP_ACCEPT);
@@ -108,12 +131,16 @@ public class Server {
     private void keyAccept(SelectionKey key) throws IOException {
         ServerSocketChannel server_channel = (ServerSocketChannel)key.channel();
         SocketChannel client_channel = server_channel.accept();
+        client_channel.configureBlocking(false);
 
         User user = new User();
         user.setClientChannel(client_channel);
 
-        client_channel.configureBlocking(false);
+        Client client = new Client(client_channel);
+        clients.add(client);
+
         client_channel.register(this.selector, SelectionKey.OP_READ, user);
+        client_channel.register(this.selector, SelectionKey.OP_WRITE, user);
 
         System.out.println("New client channel: " + client_channel.getRemoteAddress());
     }
@@ -197,6 +224,7 @@ public class Server {
                 key.interestOps(SelectionKey.OP_READ);
                 break;
             case "WQ":
+                this.writeMessage(client_channel, "[INFO] Starting the game");
                 break;
             default:
                 key.interestOps(SelectionKey.OP_READ);
@@ -228,7 +256,11 @@ public class Server {
 // ---------------------------------------------------------------------------------------------------
 
     private void disconnectClient(SocketChannel channel) throws IOException {
-        // to do
+        Client client = this.getClient(channel);
+        System.out.println("Client disconnected: " + channel.getRemoteAddress());
+
+        this.clients.remove(client);
+        channel.close();
     }
 
     private void registerClient(String content, User user, SocketChannel client_channel) throws IOException {
@@ -250,15 +282,25 @@ public class Server {
 
         User u = this.database.loginUser(data);
         if (u != null) {
-            user.setUsername(u.getUsername());
-            user.setPassword(u.getPassword());
-            user.updateFlag("WQ");
+            u.setUsername(u.getUsername());
+            u.setPassword(u.getPassword());
+            u.updateFlag("WQ");
 
-            System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
+            System.out.println("User [" + u.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
         }
         else
             user.updateFlag("L-ERR");
     }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private Client getClient(SocketChannel client_hannel) {
+        for (Client client : this.clients)
+            if (client.getChannel() == client_hannel)
+                return client;
+
+        return null;
+    }    
 }
 
 // ---------------------------------------------------------------------------------------------------
