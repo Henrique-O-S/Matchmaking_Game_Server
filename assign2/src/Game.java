@@ -1,3 +1,5 @@
+// ---------------------------------------------------------------------------------------------------
+
 import java.util.*;
 import java.io.IOException;
 import java.nio.channels.*;
@@ -5,14 +7,18 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CompletableFuture;
 
+// ---------------------------------------------------------------------------------------------------
+
 public class Game implements Runnable {
-    private static final int ROUNDS = 2;
+    private static final int ROUNDS = 3;
 
     private List<User> players;
     private int num_players;
     private int[] player_scores;
     private ByteBuffer buffer;
     private boolean game_over;
+
+// ---------------------------------------------------------------------------------------------------
 
     public Game(List<User> players) {
         this.players = players;
@@ -25,6 +31,8 @@ public class Game implements Runnable {
         for (int i = 0; i < this.num_players; i++)
             this.player_scores[i] = 0;
     }
+
+// ---------------------------------------------------------------------------------------------------
 
     @Override
     public void run() {
@@ -43,8 +51,8 @@ public class Game implements Runnable {
             
         List<User> winners = this.getWinners();
 
-        String s = "Player(s): ";
-        for(User player : winners)
+        String s = "Player(s) ";
+        for (User player : winners)
             s += player.getUsername() + " ";
         s += "won the game!\n";
 
@@ -68,7 +76,7 @@ public class Game implements Runnable {
         System.out.println("Game ended");
         try {
             for (User player : this.players)
-                this.writeMessage(player.getClientChannel(), "[EXIT] Game ended");
+                this.writeMessage(player.getClientChannel(), "[EXIT] " + Integer.toString(player.getGlobalScore()));
             this.getFeedback(false);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -76,6 +84,8 @@ public class Game implements Runnable {
 
         this.game_over = true;
     }
+
+// ---------------------------------------------------------------------------------------------------
 
     private void playRound(int round) {
         System.out.println("Round " + round);
@@ -111,8 +121,8 @@ public class Game implements Runnable {
             if (round_scores[player] == highscore)
                 winners.add(players.get(player));
 
-        String s = "Player(s): ";
-        for(User player : winners)
+        String s = "Player(s) ";
+        for (User player : winners)
             s += player.getUsername() + " ";
         s += "won this round!\n";
 
@@ -125,7 +135,9 @@ public class Game implements Runnable {
         catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-    } 
+    }
+
+// ---------------------------------------------------------------------------------------------------
 
     private String readMessage(SocketChannel channel) throws IOException {
         this.buffer.clear();
@@ -146,6 +158,8 @@ public class Game implements Runnable {
         channel.write(this.buffer);
     }
 
+// ---------------------------------------------------------------------------------------------------
+
     private void getFeedback(boolean playing) throws IOException, InterruptedException {
         CountDownLatch latch = new CountDownLatch(this.num_players);
         for (User player : this.players) {
@@ -153,7 +167,7 @@ public class Game implements Runnable {
                 try {
                     while (true) {
                         if (!playing) {
-                            if (readMessage(player.getClientChannel()).equals("received"))
+                            if (readMessage(player.getClientChannel()).equals("Message received"))
                                 break;
                         }
                         else {
@@ -183,6 +197,8 @@ public class Game implements Runnable {
         Thread.sleep(1000);
     }
 
+// ---------------------------------------------------------------------------------------------------
+
     private List<User> getWinners() {
         List<User> winners = new ArrayList<>();
         int highscore = this.player_scores[0];
@@ -198,7 +214,11 @@ public class Game implements Runnable {
         return winners;
     }
 
+// ---------------------------------------------------------------------------------------------------
+
     public boolean over() {
         return this.game_over;
     }
 }
+
+// ---------------------------------------------------------------------------------------------------

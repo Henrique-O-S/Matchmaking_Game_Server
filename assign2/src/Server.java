@@ -1,30 +1,40 @@
+// ---------------------------------------------------------------------------------------------------
+
 import java.util.*;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.*;
 import java.nio.ByteBuffer;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+// ---------------------------------------------------------------------------------------------------
+
 public class Server {
     private static final int PORT = 5000;
-    private static final int QUEUE_LIMIT = 10;
-    private static final int MAX_GAMES = 2;
-    private static final int GAME_CLIENTS = 1;
+    private static final int QUEUE_LIMIT = 5;
+    private static final int MAX_GAMES = 1;
+    private static final int GAME_CLIENTS = 3;
 
+    private Queue<User> queue;
+    private Database database;
     private Selector selector;
     private ByteBuffer buffer;
-    private Queue<User> queue;
 
-    public static void main(String[] args) {
+// ---------------------------------------------------------------------------------------------------
+
+    public static void main(String[] args) throws FileNotFoundException, IOException {
         Server server = new Server();
         server.launch();
     }
 
-    public Server() {
-        this.buffer = ByteBuffer.allocate(1024);
+    public Server() throws FileNotFoundException, IOException {
         this.queue = new LinkedList<User>();
+        this.database = new Database("data/users.txt");
+        this.buffer = ByteBuffer.allocate(1024);
     }
+
+// ---------------------------------------------------------------------------------------------------
 
     private void launch() {
         try {
@@ -93,37 +103,71 @@ public class Server {
         }
     }
 
+// ---------------------------------------------------------------------------------------------------
+
     private void keyAccept(SelectionKey key) throws IOException {
         ServerSocketChannel server_channel = (ServerSocketChannel)key.channel();
         SocketChannel client_channel = server_channel.accept();
 
-        client_channel.configureBlocking(false);
-
         User user = new User();
         user.setClientChannel(client_channel);
 
-        client_channel.register(this.selector, SelectionKey.OP_WRITE, user);
-        System.out.println("New client connected from: " + client_channel.getRemoteAddress());
+        client_channel.configureBlocking(false);
+        client_channel.register(this.selector, SelectionKey.OP_READ, user);
 
-        if (this.queue.size() <= QUEUE_LIMIT)
-            this.queue.add(user);
+        System.out.println("New client channel: " + client_channel.getRemoteAddress());
     }
 
     private void keyRead(SelectionKey key) throws IOException {
         SocketChannel client_channel = (SocketChannel)key.channel();
 
-        this.buffer.clear();
-        int bytes_read = client_channel.read(this.buffer);
-        this.buffer.flip();
+        String message = this.readMessage(client_channel);
 
-        if (bytes_read == -1) {
-            // disconnect client
+        if (message.equals("error")) {
+            this.disconnectClient(client_channel);
         }
         else {
             User user = (User)key.attachment();
-            String message = new String(this.buffer.array(), 0, bytes_read).trim();
 
-            // to do
+            String[] split_message = message.split("]");
+            String identifier = split_message[0];
+            String content = "";
+
+            switch (identifier) {
+                case "[CONNECT":
+                    if(message.equals("r"))
+                        user.updateFlag("REG");
+                    else if(message.equals("l"))
+                        user.updateFlag("LOG");
+                    key.interestOps(SelectionKey.OP_WRITE);
+                    break;
+                case "[REGISTER":
+                    content = split_message[1];
+                    this.registerClient(content, user, client_channel);
+                    key.interestOps(SelectionKey.OP_WRITE);
+                    break;
+                case "[REG-ERROR":
+                    content = split_message[1];
+                    this.registerClient(content, user, client_channel);
+                    key.interestOps(SelectionKey.OP_WRITE);
+                    break;
+                case "[LOGIN":
+                    content = split_message[1];
+                    this.loginClient(content, user, client_channel);
+                    key.interestOps(SelectionKey.OP_WRITE);
+                    break;
+                case "[LOG-ERROR":
+                    content = split_message[1];
+                    this.loginClient(content, user, client_channel);
+                    key.interestOps(SelectionKey.OP_WRITE);
+                    break;
+                case "[QUEUE":
+                    this.queue.add(user);
+                    break;
+                default:
+                    key.interestOps(SelectionKey.OP_WRITE);
+                    break;
+            }
         }
     }
 
@@ -131,7 +175,46 @@ public class Server {
         SocketChannel client_channel = (SocketChannel)key.channel();
         User user = (User)key.attachment();
 
-        // to do
+        switch (user.getFlag()) {
+            case "CON":
+                this.writeMessage(client_channel, "Message received");
+                key.interestOps(SelectionKey.OP_READ);
+                break;
+            case "REG":
+                this.writeMessage(client_channel, "Message received");
+                key.interestOps(SelectionKey.OP_READ);
+                break;
+            case "R-ERR":
+                this.writeMessage(client_channel, "User already exists, try again!");
+                key.interestOps(SelectionKey.OP_READ);
+                break;
+            case "LOG":
+                this.writeMessage(client_channel, "Message received");
+                key.interestOps(SelectionKey.OP_READ);
+                break;
+            case "L-ERR":
+                this.writeMessage(client_channel, "Invalid credentials, try again!");
+                key.interestOps(SelectionKey.OP_READ);
+                break;
+            case "WQ":
+                break;
+            default:
+                key.interestOps(SelectionKey.OP_READ);
+                break;
+        }
+    }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private String readMessage(SocketChannel channel) throws IOException {
+        this.buffer.clear();
+        int bytes_read = channel.read(this.buffer);
+        this.buffer.flip();
+
+        if (bytes_read >= 0)
+            return new String(this.buffer.array(), 0, bytes_read).trim();
+
+        return "error";
     }
 
     private void writeMessage(SocketChannel channel, String message) throws IOException {
@@ -141,4 +224,41 @@ public class Server {
         
         channel.write(this.buffer);
     }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private void disconnectClient(SocketChannel channel) throws IOException {
+        // to do
+    }
+
+    private void registerClient(String content, User user, SocketChannel client_channel) throws IOException {
+        String data[] = content.trim().split("\\s+");
+
+        if (this.database.registerUser(data)) {
+            user.setUsername(data[0]);
+            user.setPassword(data[1]);
+            user.updateFlag("WQ");
+
+            System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
+        }
+        else
+            user.updateFlag("R-ERR");
+    }
+
+    private void loginClient(String content, User user, SocketChannel client_channel) throws IOException {
+        String data[] = content.trim().split("\\s+");
+
+        User u = this.database.loginUser(data);
+        if (u != null) {
+            user.setUsername(u.getUsername());
+            user.setPassword(u.getPassword());
+            user.updateFlag("WQ");
+
+            System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
+        }
+        else
+            user.updateFlag("L-ERR");
+    }
 }
+
+// ---------------------------------------------------------------------------------------------------
