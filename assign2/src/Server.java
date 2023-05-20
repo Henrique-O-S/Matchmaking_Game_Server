@@ -171,6 +171,8 @@ public class Server {
                         }
 
                         if (game.over()) {
+                            ArrayList<User> updated = new ArrayList<>();
+
                             for (User user : users) {
                                 SocketChannel client_channel = user.getClientChannel();
                                 client_channel.configureBlocking(false);
@@ -185,7 +187,11 @@ public class Server {
                                         // something
                                     }
                                 }
+
+                                updated.add(user);
                             }
+
+                            database.updateData(updated);
                         }
                     }
                 }
