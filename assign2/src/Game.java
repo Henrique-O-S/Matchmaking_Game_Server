@@ -51,7 +51,6 @@ public class Game implements Runnable {
 
         String s = "Player(s) ";
         for (User player : winners) {
-            player.roundVictory();
             s += player.getUsername() + " ";
         }
         s += "won the game!\n";
@@ -122,8 +121,10 @@ public class Game implements Runnable {
                 winners.add(players.get(player));
 
         String s = "Player(s) ";
-        for (User player : winners)
+        for (User player : winners){
+            player.roundVictory();
             s += player.getUsername() + " ";
+        }
         s += "won this round!\n";
 
         System.out.println(s);
