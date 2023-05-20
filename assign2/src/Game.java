@@ -167,7 +167,7 @@ public class Game implements Runnable {
                 try {
                     while (true) {
                         if (!playing) {
-                            if (readMessage(player.getClientChannel()).equals("Message received"))
+                            if (readMessage(player.getClientChannel()).equals("[INFO] Message received"))
                                 break;
                         }
                         else {

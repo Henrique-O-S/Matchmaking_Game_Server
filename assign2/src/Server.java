@@ -204,11 +204,11 @@ public class Server {
 
         switch (user.getFlag()) {
             case "CON":
-                this.writeMessage(client_channel, "Message received");
+                this.writeMessage(client_channel, "[INFO] Message received");
                 key.interestOps(SelectionKey.OP_READ);
                 break;
             case "REG":
-                this.writeMessage(client_channel, "Message received");
+                this.writeMessage(client_channel, "[INFO] Message received");
                 key.interestOps(SelectionKey.OP_READ);
                 break;
             case "R-ERR":
@@ -216,7 +216,7 @@ public class Server {
                 key.interestOps(SelectionKey.OP_READ);
                 break;
             case "LOG":
-                this.writeMessage(client_channel, "Message received");
+                this.writeMessage(client_channel, "[INFO] Message received");
                 key.interestOps(SelectionKey.OP_READ);
                 break;
             case "L-ERR":
@@ -294,9 +294,9 @@ public class Server {
 
 // ---------------------------------------------------------------------------------------------------
 
-    private Client getClient(SocketChannel client_hannel) {
+    private Client getClient(SocketChannel client_channel) {
         for (Client client : this.clients)
-            if (client.getChannel() == client_hannel)
+            if (client.getChannel() == client_channel)
                 return client;
 
         return null;

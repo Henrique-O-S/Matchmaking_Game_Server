@@ -110,21 +110,21 @@ public class Client {
             case "r":
                 this.writeMessage("[CONNECT] " + s);
                 message = this.readMessage();
-                if (message.equals("Message received"))
+                if (message.equals("[INFO] Message received"))
                     if (!this.register())
                         return false;
                 break;
             case "l":
                 this.writeMessage("[CONNECT] " + s);
                 message = this.readMessage();
-                if (message.equals("Message received"))
+                if (message.equals("[INFO] Message received"))
                     if (!this.login())
                         return false;
                 break;
             case "q":
                 this.writeMessage("[CONNECT] " + s);
                 message = this.readMessage();
-                if (message.equals("Message received")) {
+                if (message.equals("[INFO] Message received")) {
                     System.out.println("Goodbye!");
                     return false;
                 }
@@ -149,7 +149,7 @@ public class Client {
 
         this.writeMessage("[REGISTER] " + input[0] + " " + input[1]);
         String message = this.readMessage();
-        if (!message.equals("Message received")) {
+        if (!message.equals("[INFO] Message received")) {
             System.out.println(message);
             return false;
         }
@@ -175,7 +175,7 @@ public class Client {
 
         this.writeMessage("[LOGIN] " + input[0] + " " + input[1]);
         String message = this.readMessage();
-        if (!message.equals("Message received")) {
+        if (!message.equals("[INFO] Message received")) {
             System.out.println(message);
             return false;
         }
@@ -192,6 +192,12 @@ public class Client {
     private boolean queue() throws IOException {
         this.writeMessage("[QUEUE] ");
 
+        String message = this.readMessage();
+        if (!message.equals("[INFO] Message received")) {
+            System.out.println(message);
+            return false;
+        }
+
         System.out.println("You were added to the queue");
         return this.playGame();
     }
@@ -206,7 +212,7 @@ public class Client {
 
             switch (identifier) {
                 case "[INFO":
-                    this.writeMessage("Message received");
+                    this.writeMessage("[INFO] Message received");
                     break;
                 case "[PLAY":
                     this.play();
@@ -214,7 +220,7 @@ public class Client {
                 case "[EXIT":
                     System.out.println("Your updated score is " + this.user.getGlobalScore());
                     System.out.println("Returning to queue");
-                    this.writeMessage("Message received");
+                    this.writeMessage("[INFO] Message received");
                     return true;
                 default:
                     System.out.println("Invalid message");
