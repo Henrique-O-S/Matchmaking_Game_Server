@@ -14,10 +14,11 @@ public class User {
 
 // ---------------------------------------------------------------------------------------------------
 
-    public User() {
+    public User(SocketChannel client_channel) {
         this.username = "";
         this.password = "";
         this.global_score = 0;
+        this.client_channel = client_channel;
         this.curr_play = 0;
         this.flag = "CON";
     }

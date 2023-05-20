@@ -110,14 +110,14 @@ public class Game implements Runnable {
         for (int player = 0; player < this.num_players; player++)
             round_scores[player] = this.players.get(player).currentPlay();
 
-        int highscore = round_scores[0];
+        int highscore = -1;
         List<User> winners = new ArrayList<>();
 
-        for (int player = 1; player < this.num_players; player++)
+        for (int player = 0; player < this.num_players; player++)
             if (round_scores[player] > highscore)
                 highscore = round_scores[player];
 
-        for (int player = 1; player < this.num_players; player++)
+        for (int player = 0; player < this.num_players; player++)
             if (round_scores[player] == highscore)
                 winners.add(players.get(player));
 
@@ -201,13 +201,13 @@ public class Game implements Runnable {
 
     private List<User> getWinners() {
         List<User> winners = new ArrayList<>();
-        int highscore = this.player_scores[0];
+        int highscore = -1;
 
-        for (int player = 1; player < this.num_players; player++)
+        for (int player = 0; player < this.num_players; player++)
             if (player_scores[player] > highscore)
                 highscore = player_scores[player];
 
-        for (int player = 1; player < this.num_players; player++)
+        for (int player = 0; player < this.num_players; player++)
             if (player_scores[player] == highscore)
                 winners.add(players.get(player));
 

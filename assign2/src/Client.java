@@ -30,7 +30,7 @@ public class Client {
     }
 
     public Client(SocketChannel channel) {
-        this.user = new User();
+        this.user = new User(channel);
         this.channel = channel;
         this.buffer = ByteBuffer.allocate(1024);
         this.scanner = new Scanner(System.in);
@@ -197,7 +197,6 @@ public class Client {
                     break;
                 case "[EXIT":
                     System.out.println("Your updated score is " + this.user.getGlobalScore());
-                    System.out.println("You were added to the queue");
                     return;
                 default:
                     System.out.println("Invalid message");

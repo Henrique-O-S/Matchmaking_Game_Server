@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
+import java.security.SecureRandom;
 
 // ---------------------------------------------------------------------------------------------------
 
@@ -16,7 +17,8 @@ public class Server {
     private static final int PORT = 5002;
     private static final int QUEUE_LIMIT = 5;
     private static final int MAX_GAMES = 1;
-    private static final int GAME_CLIENTS = 2;
+    private static final int GAME_CLIENTS = 3;
+    private static final int TOKEN_BYTE_NUMBER = 10;
 
     private List<Client> clients;
     private Queue<User> queue;
@@ -133,9 +135,7 @@ public class Server {
         SocketChannel client_channel = server_channel.accept();
         client_channel.configureBlocking(false);
 
-        User user = new User();
-        user.setClientChannel(client_channel);
-
+        User user = new User(client_channel);
         Client client = new Client(client_channel);
         clients.add(client);
 
@@ -296,7 +296,17 @@ public class Server {
                 return client;
 
         return null;
-    }    
+    }
+
+    private byte[] getRandomBytes() {
+        byte[] bytes = new byte[TOKEN_BYTE_NUMBER];
+
+        SecureRandom secure_random = new SecureRandom();
+        secure_random.nextBytes(bytes);
+
+        return bytes;
+    }
+
 }
 
 // ---------------------------------------------------------------------------------------------------
