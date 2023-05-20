@@ -10,6 +10,7 @@ public class User {
     private int global_score;
     private SocketChannel client_channel;
     private int curr_play;
+    private int rounds_won;
     private String flag;
 
 // ---------------------------------------------------------------------------------------------------
@@ -20,6 +21,7 @@ public class User {
         this.global_score = 0;
         this.client_channel = client_channel;
         this.curr_play = 0;
+        this.rounds_won = 0;
         this.flag = "CON";
     }
 
@@ -28,6 +30,7 @@ public class User {
         this.password = password;
         this.global_score = global_score;
         this.curr_play = 0;
+        this.rounds_won = 0;
         this.flag = "CON";
     }
 
@@ -53,6 +56,10 @@ public class User {
         return this.curr_play;
     }
 
+    public int roundsWon() {
+        return this.rounds_won;
+    }
+
     public String getFlag() {
         return this.flag;
     }
@@ -75,11 +82,19 @@ public class User {
         this.curr_play = value;
     }
 
+    public void roundVictory() {
+        this.rounds_won++;
+    }
+
     public void updateFlag(String flag) {
         this.flag = flag;
     }
 
 // ---------------------------------------------------------------------------------------------------
+
+    public void resetRoundsWon() {
+        this.rounds_won = 0;
+    }
 
     public void victory() {
         this.global_score += 120;

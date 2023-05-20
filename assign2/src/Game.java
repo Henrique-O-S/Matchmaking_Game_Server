@@ -14,7 +14,6 @@ public class Game implements Runnable {
 
     private List<User> players;
     private int num_players;
-    private int[] player_scores;
     private ByteBuffer buffer;
     private boolean game_over;
 
@@ -23,23 +22,22 @@ public class Game implements Runnable {
     public Game(List<User> players) {
         this.players = players;
         this.num_players = players.size();
-        this.player_scores = new int[this.num_players];
         this.buffer = ByteBuffer.allocate(1024);
         this.game_over = false;
-
-        // initialize scores
-        for (int i = 0; i < this.num_players; i++)
-            this.player_scores[i] = 0;
     }
 
 // ---------------------------------------------------------------------------------------------------
 
     @Override
     public void run() {
+        this.game_over = false;
         System.out.println("Game started");
+
         try {
-            for (User player : this.players)
+            for (User player : this.players) {
+                player.resetRoundsWon();
                 this.writeMessage(player.getClientChannel(), "[INFO] Game started");
+            }
             this.getFeedback(false);
         }
         catch (IOException | InterruptedException e) {
@@ -52,8 +50,10 @@ public class Game implements Runnable {
         List<User> winners = this.getWinners();
 
         String s = "Player(s) ";
-        for (User player : winners)
+        for (User player : winners) {
+            player.roundVictory();
             s += player.getUsername() + " ";
+        }
         s += "won the game!\n";
 
         System.out.println(s);
@@ -194,22 +194,21 @@ public class Game implements Runnable {
         }
 
         latch.await(); // wait until the latch count reaches zero
-        Thread.sleep(1000);
     }
 
 // ---------------------------------------------------------------------------------------------------
 
     private List<User> getWinners() {
         List<User> winners = new ArrayList<>();
-        int highscore = -1;
+        int highest_rounds = -1;
 
         for (int player = 0; player < this.num_players; player++)
-            if (player_scores[player] > highscore)
-                highscore = player_scores[player];
+            if (this.players.get(player).roundsWon() > highest_rounds)
+                highest_rounds = this.players.get(player).roundsWon();
 
         for (int player = 0; player < this.num_players; player++)
-            if (player_scores[player] == highscore)
-                winners.add(players.get(player));
+            if (this.players.get(player).roundsWon() == highest_rounds)
+                winners.add(this.players.get(player));
 
         return winners;
     }

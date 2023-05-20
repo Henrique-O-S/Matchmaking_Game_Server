@@ -7,6 +7,8 @@ import java.nio.ByteBuffer;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import java.security.SecureRandom;
@@ -17,7 +19,7 @@ public class Server {
     private static final int PORT = 5002;
     private static final int QUEUE_LIMIT = 5;
     private static final int MAX_GAMES = 1;
-    private static final int GAME_CLIENTS = 3;
+    private static final int GAME_CLIENTS = 2;
     private static final int TOKEN_BYTE_NUMBER = 10;
 
     private List<Client> clients;
@@ -100,25 +102,45 @@ public class Server {
                         users.add(this.queue.poll());
 
                     for (User user : users) {
-                        SelectionKey key = user.getClientChannel().keyFor(selector);
-                        if (key != null)
+                        SelectionKey key = user.getClientChannel().keyFor(this.selector);
+                        if (key != null) {
                             key.cancel();
+                            key.attach(null);
+                        }
                     }   
 
                     // start new game
                     Game game = new Game(users);
-                    executor.submit(game);
+                    Future<?> game_future = executor.submit(game);
 
-                    // game over
+                    try {
+                        game_future.get(); // wait for game to finish
+                    }
+                    catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+
                     if (game.over()) {
                         for (User user : users) {
-                            this.queue.add(user);
                             SocketChannel client_channel = user.getClientChannel();
                             client_channel.configureBlocking(false);
-                            client_channel.register(selector, SelectionKey.OP_READ, user);
+
+                            SelectionKey key = client_channel.keyFor(this.selector);
+                            if (key != null) {
+                                try {
+                                    int interestOps = key.interestOps();
+                                    key.interestOps(interestOps | SelectionKey.OP_READ);
+                                    key.attach(user);
+                                } catch (CancelledKeyException e) {
+                                    // something
+                                }
+                            }
                         }
 
-                        users.clear();
+                        for (User user : users) {
+                            user.updateFlag("WQ");
+                            this.queue.add(user);
+                        }
                     }
                 }
             }

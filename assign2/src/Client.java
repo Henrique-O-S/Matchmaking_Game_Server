@@ -71,6 +71,10 @@ public class Client {
         return this.channel;
     }
 
+    public User getUser() {
+        return this.user;
+    }
+
 // ---------------------------------------------------------------------------------------------------
 
     private String[] readInput() {
@@ -172,9 +176,9 @@ public class Client {
     }
 
     private void queue() throws IOException {
-        while (true) {
-            this.writeMessage("[QUEUE] ");
+        this.writeMessage("[QUEUE] ");
 
+        while (true) {
             System.out.println("You were added to the queue");
             this.playGame();
         }
@@ -196,6 +200,7 @@ public class Client {
                     this.play();
                     break;
                 case "[EXIT":
+                    this.writeMessage("[INFO] Message received");
                     System.out.println("Your updated score is " + this.user.getGlobalScore());
                     return;
                 default:
