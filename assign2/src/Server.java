@@ -25,6 +25,9 @@ public class Server {
 
     private List<Client> clients;
     private Queue<User> queue;
+
+    private List<User> activeUsers;
+
     private Database database;
     private Selector selector;
     private ByteBuffer buffer;
@@ -39,7 +42,10 @@ public class Server {
 
     public Server() throws FileNotFoundException, IOException {
         this.clients = new ArrayList<Client>();
+        
         this.queue = new LinkedList<User>();
+        this.activeUsers = new ArrayList<User>();
+
         this.database = new Database("data/users.txt");
         this.buffer = ByteBuffer.allocate(1024);
 
@@ -217,7 +223,7 @@ public class Server {
         String message = this.readMessage(client_channel);
 
         if (message.equals("error")) {
-            this.disconnectClient(client_channel);
+            this.disconnectClient(key);
         }
         else {
             User user = (User)key.attachment();
@@ -318,11 +324,13 @@ public class Server {
 
 // ---------------------------------------------------------------------------------------------------
 
-    private void disconnectClient(SocketChannel channel) throws IOException {
+    private void disconnectClient(SelectionKey key) throws IOException {
+        SocketChannel channel = (SocketChannel)key.channel();
+        User user = (User)key.attachment();
         Client client = this.getClient(channel);
         System.out.println("Client disconnected: " + channel.getRemoteAddress());
-
         this.clients.remove(client);
+        this.activeUsers.remove(user);
         channel.close();
     }
 
@@ -333,7 +341,7 @@ public class Server {
             user.setUsername(data[0]);
             user.setPassword(data[1]);
             user.updateFlag("WQ");
-
+            activeUsers.add(user);
             System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
         }
         else
@@ -349,7 +357,7 @@ public class Server {
             user.setPassword(u.getPassword());
             user.setGlobalScore(u.getGlobalScore());
             user.updateFlag("WQ");
-
+            activeUsers.add(user);
             System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
 
         }

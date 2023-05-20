@@ -39,7 +39,7 @@ public class Client {
             public void handle(Signal signal) {
                     System.out.println("\nDISCONNECTING...");
                     try {
-                        writeMessage("q");
+                        writeMessage("error");
                     } catch (IOException e) {
                         e.printStackTrace();
                     } finally {
