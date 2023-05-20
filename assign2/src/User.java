@@ -1,75 +1,111 @@
-import java.nio.channels.SocketChannel;
+// ---------------------------------------------------------------------------------------------------
+
+import java.nio.channels.*;
+
+// ---------------------------------------------------------------------------------------------------
 
 public class User {
+    private String username;
+    private String password;
+    private int global_score;
+    private SocketChannel client_channel;
+    private int curr_play;
+    private int rounds_won;
+    private String flag;
 
-    private String username = "";
-    private String password = "";
-    private Integer globalScore;
-    private SocketChannel channel;
+// ---------------------------------------------------------------------------------------------------
 
-    private State state;
-
-    public enum State{
-        CONNECTED,
-        REGISTERING,
-        REGISTERING_ERROR,
-        LOGGING,
-        LOGGING_ERROR,
-        AUTHENTICATED,
-        QUEUE,
-        PLAYING,
-        DISCONNECTED
+    public User(SocketChannel client_channel) {
+        this.username = "";
+        this.password = "";
+        this.global_score = 0;
+        this.client_channel = client_channel;
+        this.curr_play = 0;
+        this.rounds_won = 0;
+        this.flag = "CON";
     }
 
-    public User(String username) {
-        this.username = username;
-        this.state = State.CONNECTED;
-    }
-    public User(String username, String password, Integer score) {
+    public User(String username, String password, int global_score) {
         this.username = username;
         this.password = password;
-        this.globalScore = score;
-        this.state = State.CONNECTED;
+        this.global_score = global_score;
+        this.curr_play = 0;
+        this.rounds_won = 0;
+        this.flag = "CON";
     }
 
-    public void setUsername(String username){
-        this.username = username;
-    }
+// ---------------------------------------------------------------------------------------------------
 
-    public void setPassword(String password){
-        this.password = password;
-    }
-
-    public void setScore(Integer score){
-        this.globalScore = score;
-    }
-
-    public String getUsername(){
+    public String getUsername() {
         return this.username;
     }
 
-    public String getPassword(){
+    public String getPassword() {
         return this.password;
     }
 
-    public Integer getScore(){
-        return this.globalScore;
+    public int getGlobalScore() {
+        return this.global_score;
     }
 
-    public State getState(){
-        return state;
+    public SocketChannel getClientChannel() {
+        return this.client_channel;
     }
 
-    public void setState(State state){
-        this.state = state;
+    public int currentPlay() {
+        return this.curr_play;
     }
 
-    public void setSocketChannel(SocketChannel channel){
-        this.channel = channel;
+    public int roundsWon() {
+        return this.rounds_won;
     }
 
-    public SocketChannel getSocketChannel(){
-        return this.channel;
+    public String getFlag() {
+        return this.flag;
     }
 
+// ---------------------------------------------------------------------------------------------------
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setClientChannel(SocketChannel client_channel) {
+        this.client_channel = client_channel;
+    }
+
+    public void setPlay(int value) {
+        this.curr_play = value;
+    }
+
+    public void roundVictory() {
+        this.rounds_won++;
+    }
+
+    public void updateFlag(String flag) {
+        this.flag = flag;
+    }
+
+// ---------------------------------------------------------------------------------------------------
+
+    public void resetRoundsWon() {
+        this.rounds_won = 0;
+    }
+
+    public void victory() {
+        this.global_score += 120;
+    }
+
+    public void defeat() {
+        if (this.global_score < 20)
+            this.global_score = 0;
+        else
+            this.global_score -= 20;
+    }
 }
+
+// ---------------------------------------------------------------------------------------------------

@@ -1,253 +1,223 @@
+// ---------------------------------------------------------------------------------------------------
+
 import java.util.*;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
+
+// ---------------------------------------------------------------------------------------------------
 
 public class Game implements Runnable {
-    private static final int ROUNDS = 5;
+    private static final int ROUNDS = 3;
 
     private List<User> players;
-    private int numPlayers;
-    private int[] playerScores;
+    private int num_players;
+    private ByteBuffer buffer;
+    private boolean game_over;
+
+// ---------------------------------------------------------------------------------------------------
 
     public Game(List<User> players) {
         this.players = players;
-        this.numPlayers = players.size();
-        this.playerScores = new int[this.numPlayers];
-        for (int i = 0; i < this.numPlayers; i++)
-            this.playerScores[i] = 0;
+        this.num_players = players.size();
+        this.buffer = ByteBuffer.allocate(1024);
+        this.game_over = false;
     }
+
+// ---------------------------------------------------------------------------------------------------
 
     @Override
     public void run() {
-        //STARTING GAME
-        System.out.println("\nStarting game\n");
+        this.game_over = false;
+        System.out.println("Game started");
+
         try {
-            sendToAllUsers(players, "INFO" + "-" + "Starting game\n");
+            for (User player : this.players) {
+                player.resetRoundsWon();
+                this.writeMessage(player.getClientChannel(), "[INFO] Game started");
+            }
+            this.getFeedback(false);
+        }
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
 
-            readConfirmationFromUsers(players);
+        for (int round = 1; round <= ROUNDS; round++)
+            this.playRound(round);
+            
+        List<User> winners = this.getWinners();
 
-            Thread.sleep(1000);
+        String s = "Player(s) ";
+        for (User player : winners) {
+            player.roundVictory();
+            s += player.getUsername() + " ";
+        }
+        s += "won the game!\n";
 
+        System.out.println(s);
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] " + s);
+            this.getFeedback(false);
+        } 
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // update player ranks
+        for(User player : players)
+            player.defeat();
+
+        for(User player : winners)
+            player.victory();
+
+        System.out.println("Game ended");
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[EXIT] Game ended");
+            this.getFeedback(false);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
-        //PLAYING ROUNDS
-        for (int round = 1; round < ROUNDS; round++)
-            playRound(round);
-
-        //SENDING GAME RESULTS
-        List<User> winners = getWinners();
-        System.out.println("Player(s): ");
-
-        for(User player : winners){
-            System.out.println(player);
-        }
-
-        System.out.println("Won the game\n");
-        try {
-            this.sendToAllUsers(players, "INFO" + "-" + "Player(s): ");
-
-            readConfirmationFromUsers(players);
-
-            for(User player : winners){
-                this.sendToAllUsers(players, "INFO" + "-" + player.toString());
-
-                readConfirmationFromUsers(players);
-            }
-
-            this.sendToAllUsers(players, "INFO" + "-" + "Won the game\n");
-
-            readConfirmationFromUsers(players);
-
-            Thread.sleep(1000);
-
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        //UPDATING PLAYER RANKS
-        for(User player : players){
-            if(player.getScore() < 20) {
-                player.setScore(0);
-            }
-            else{
-                player.setScore(player.getScore()-20);
-            }
-        }
-
-        for(User player : winners){
-            player.setScore(player.getScore()+120);
-        }
-
-        try {
-            this.sendToAllUsers(players, "EXIT");
-
-            readConfirmationFromUsers(players);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.game_over = true;
     }
+
+// ---------------------------------------------------------------------------------------------------
 
     private void playRound(int round) {
-        //SIGNALING ROUND
-        System.out.println("[Round " + round + "]");
+        System.out.println("Round " + round);
         try {
-            sendToAllUsers(players, "INFO" + "-" + "[Round " + round + "]\n");
-
-            readConfirmationFromUsers(players);
-
-            Thread.sleep(1000);
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] Round " + round);
+            this.getFeedback(false);
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace(); 
+            e.printStackTrace();
         }
 
-        //GETTING USERS PLAYS
-        int[] roundScores = new int[this.numPlayers];
-        for (int player = 0; player < this.numPlayers; player++) {
-            try {
-                roundScores[player] = getPlay(player);
-                //readConfirmationFromUsers(players);
-            } catch (IOException e) {
-                e.printStackTrace(); 
-            }
+        try {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[PLAY] Press ENTER to roll the dice");
+            this.getFeedback(true);
         }
-            
-        int highscore = roundScores[0];
+        catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        int[] round_scores = new int[this.num_players];
+        for (int player = 0; player < this.num_players; player++)
+            round_scores[player] = this.players.get(player).currentPlay();
+
+        int highscore = -1;
         List<User> winners = new ArrayList<>();
-        for (int player = 1; player < this.numPlayers; player++) {
-            if (roundScores[player] > highscore) {
-                highscore = roundScores[player];
-            }
-        }
 
-        for (int player = 1; player < this.numPlayers; player++) {
-            if (roundScores[player] == highscore) {
+        for (int player = 0; player < this.num_players; player++)
+            if (round_scores[player] > highscore)
+                highscore = round_scores[player];
+
+        for (int player = 0; player < this.num_players; player++)
+            if (round_scores[player] == highscore)
                 winners.add(players.get(player));
-            }
-        }
 
-        //SENDING ROUND RESULTS
-        System.out.println("Player(s): ");
+        String s = "Player(s) ";
+        for (User player : winners)
+            s += player.getUsername() + " ";
+        s += "won this round!\n";
 
-        for(User player : winners){
-            System.out.println(player);
-        }
-
-        System.out.println("Won this round\n");
-
+        System.out.println(s);
         try {
-            this.sendToAllUsers(players, "INFO" + "-" + "Player(s): ");
-
-            readConfirmationFromUsers(players);
-
-            for(User player : winners){
-                this.sendToAllUsers(players, "INFO" + "-" + player.toString());
-
-                readConfirmationFromUsers(players);
-            }
-
-            this.sendToAllUsers(players, "INFO" + "-" + "Won this round\n");
-
-            readConfirmationFromUsers(players);
-
-            Thread.sleep(1000);
-
-        } catch (IOException | InterruptedException e) {
+            for (User player : this.players)
+                this.writeMessage(player.getClientChannel(), "[INFO] " + s);
+            this.getFeedback(false);
+        } 
+        catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private List<User> getWinners() {
-        int highscore = this.playerScores[0];
-        List<User> winners = new ArrayList<>();
-        for (int player = 1; player < this.numPlayers; player++) {
-            if (playerScores[player] > highscore) {
-                highscore = playerScores[player];
-            }
+// ---------------------------------------------------------------------------------------------------
+
+    private String readMessage(SocketChannel channel) throws IOException {
+        this.buffer.clear();
+        int bytes_read = channel.read(this.buffer);
+        this.buffer.flip();
+
+        if (bytes_read >= 0)
+            return new String(this.buffer.array(), 0, bytes_read).trim();
+
+        return "error";
+    }
+
+    private void writeMessage(SocketChannel channel, String message) throws IOException {
+        this.buffer.clear();
+        this.buffer.put(message.getBytes());
+        this.buffer.flip();
+        
+        channel.write(this.buffer);
+    }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private void getFeedback(boolean playing) throws IOException, InterruptedException {
+        CountDownLatch latch = new CountDownLatch(this.num_players);
+        for (User player : this.players) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    while (true) {
+                        if (!playing) {
+                            if (readMessage(player.getClientChannel()).equals("[INFO] Message received"))
+                                break;
+                        }
+                        else {
+                            String message = this.readMessage(player.getClientChannel());
+                            String[] split_message = message.split("]");
+                            String identifier = split_message[0];
+
+                            if (identifier.equals("[PLAY")) {
+                                int play = Integer.parseInt(split_message[1].trim());
+                                player.setPlay(play);
+                                System.out.println("Player " + player.getUsername() + " got " + play);
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    latch.countDown();
+                }
+            });
         }
 
-        for (int player = 1; player < this.numPlayers; player++) {
-            if (playerScores[player] == highscore) {
-                winners.add(players.get(player));
-            }
-        }
+        latch.await(); // wait until the latch count reaches zero
+    }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private List<User> getWinners() {
+        List<User> winners = new ArrayList<>();
+        int highest_rounds = -1;
+
+        for (int player = 0; player < this.num_players; player++)
+            if (this.players.get(player).roundsWon() > highest_rounds)
+                highest_rounds = this.players.get(player).roundsWon();
+
+        for (int player = 0; player < this.num_players; player++)
+            if (this.players.get(player).roundsWon() == highest_rounds)
+                winners.add(this.players.get(player));
 
         return winners;
     }
 
-    private int getPlay(int player) throws IOException {
-        sendToUser(this.players.get(player), "PLAY" + "-" + "Press ENTER to roll the dice");
+// ---------------------------------------------------------------------------------------------------
 
-        SocketChannel channel = this.players.get(player).getSocketChannel();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-
-        while (true) {
-            buffer.clear();
-            int bytesRead = channel.read(buffer);
-            String message = new String(buffer.array(), 0, bytesRead).trim();
-            buffer.flip();
-            
-            int play = Integer.parseInt(message);
-            if (play >= 1 && play <= 12) {
-                System.out.println("Player " + player + " got " + play);
-                return play;
-            }
-        }
-    }
-
-    private void sendToUser(User player,String message)throws IOException{
-        
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-
-        buffer.clear();
-        buffer.put(message.getBytes());
-        buffer.flip();
-    
-        SocketChannel channel = player.getSocketChannel();
-        channel.write(buffer);
-    }
-
-    private void sendToAllUsers(List<User> players,String message)throws IOException{
-        
-        for(User player : players){
-           sendToUser(player, message);
-        }
-    }
-
-    private void readConfirmationFromUsers(List<User> players)throws IOException{
-
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-
-        int players_ready = 0;
-
-        while (true) {
-            
-            for(User player : players){
-
-                while(true){
-                    SocketChannel channel = player.getSocketChannel();
-                    buffer.clear();
-                    channel.read(buffer);
-                    buffer.flip();
-                    String response = new String(buffer.array(), 0, buffer.limit()).trim();
-
-
-                    if(response.equals("OK")){
-                        players_ready++;
-                        System.out.println("User: " + player.getUsername() + " is ready");
-                        System.out.println("Players Ready: " + players_ready);
-                        break;
-                    }
-                }
-                
-
-            }
-            if(players_ready == players.size()){
-                System.out.println("Proceeding");
-                return;
-            }
-        }
+    public boolean over() {
+        return this.game_over;
     }
 }
+
+// ---------------------------------------------------------------------------------------------------

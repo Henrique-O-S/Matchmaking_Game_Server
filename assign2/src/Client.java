@@ -1,262 +1,251 @@
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Random;
+// ---------------------------------------------------------------------------------------------------
 
+import java.util.*;
+import java.io.IOException;
+import java.nio.channels.*;
+import java.nio.ByteBuffer;
+import java.net.InetSocketAddress;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
+// ---------------------------------------------------------------------------------------------------
 
 public class Client {
     private static final int PORT = 5002;
-    private static final int TIMEOUT = 5000;
+    private static final int TIMEOUT = 10000;
 
-    private SocketChannel channel;
     private User user;
+    private SocketChannel channel;
+    private ByteBuffer buffer;
     private Scanner scanner;
-    private ByteBuffer buffer = ByteBuffer.allocate(1024);
+    private SignalHandler signal_handler;
 
-    private SignalHandler handler = new SignalHandler() {
-        public void handle(Signal signal) {
-            System.out.println("\nDISCONNECTING...");
-            try {
-                sendMessage("q");
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                System.out.println("\nGOOD BYE\n");
-                System.exit(0);
-            }
-        }
-    };
-
-    public Client(SocketChannel channel) {
-        this.channel = channel;
-        this.scanner = new Scanner(System.in);
-    }
+// ---------------------------------------------------------------------------------------------------
 
     public static void main(String[] args) throws IOException {
-            SocketChannel channel = SocketChannel.open();
-            channel.connect(new InetSocketAddress(PORT));
-            new Client(channel).start();
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(PORT));
+
+        new Client(channel).launch();
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public Client(SocketChannel channel) {
+        this.user = new User(channel);
+        this.channel = channel;
+        this.buffer = ByteBuffer.allocate(1024);
+        this.scanner = new Scanner(System.in);
+
+        this.signal_handler = new SignalHandler() {
+            public void handle(Signal signal) {
+                    System.out.println("\nDISCONNECTING...");
+                    try {
+                        writeMessage("q");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        System.out.println("\nGOOD BYE\n");
+                        System.exit(0);
+                    }
+                }
+            };
     }
 
-    public User getUser() {
-        return user;
+// ---------------------------------------------------------------------------------------------------
+
+    private void launch() {
+        try {
+            Signal.handle(new Signal("INT"), this.signal_handler);
+
+            String message = this.readMessage();
+            if (message.equals("[INFO] You are connected"))
+                this.connect();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+// ---------------------------------------------------------------------------------------------------
 
     public SocketChannel getChannel() {
         return this.channel;
     }
 
-    public String sendMessageReceiveResponse(String message) throws IOException {
-        buffer.clear();
-        buffer.put(message.getBytes());
-
-        buffer.flip();
-        channel.write(buffer);
-
-        buffer.clear();
-        
-        ByteBuffer response = ByteBuffer.allocate(1024);
-
-        int bytesRead = channel.read(response);
-        if (bytesRead >= 1) {
-            return new String(response.array(), 0, response.limit()).trim();
-        }
-        return "error";
+    public User getUser() {
+        return this.user;
     }
 
-    public void sendMessage(String message) throws IOException {
-        buffer.clear();
-        buffer.put(message.getBytes());
+// ---------------------------------------------------------------------------------------------------
 
-        buffer.flip();
-        channel.write(buffer);
-
-        buffer.clear();
+    private String[] readInput() {
+        String input = this.scanner.nextLine();
+        return input.split("\\s+");
     }
-
 
     public String readMessage() throws IOException {
-        buffer.clear();
-        int bytesRead = channel.read(buffer);
-        buffer.flip();
-        if (bytesRead >= 0) {
-            return new String(buffer.array(), 0, buffer.limit()).trim();
-        }
+        this.buffer.clear();
+        int bytes_read = this.channel.read(this.buffer);
+        this.buffer.flip();
+
+        if (bytes_read >= 0)
+            return new String(this.buffer.array(), 0, bytes_read).trim();
+
         return "error";
     }
 
-    public void start() throws IOException {
-        this.user = new User("Default");
-        String message;
-        String data[];
-        Signal.handle(new Signal("INT"), handler);
+    public void writeMessage(String message) throws IOException {
+        this.buffer.clear();
+        this.buffer.put(message.getBytes());
+        this.buffer.flip();
 
+        this.channel.write(this.buffer);
+    }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private void connect() throws IOException {
         while (true) {
-            switch (this.user.getState()) {
-                case CONNECTED: {
-                    buffer.clear();
-                    channel.read(buffer);
-                    buffer.flip();
-                    String response = new String(buffer.array(), 0, buffer.limit()).trim();
-                    if (response.equals("Connection Established")) {
-                        System.out.println("'R' to REGISTER, 'L' to LOGIN, or '^C' to QUIT (at anytime)");
-                        data = readInput();
-                        if (data[0].toLowerCase().equals("r")) {
-                            message = sendMessageReceiveResponse(data[0]);
-                            if (message.equals("OK")) {
-                                this.user.setState(User.State.REGISTERING);
-                            }
-                        }
+            System.out.println("'R' to REGISTER, 'L' to LOGIN, or '^C' to QUIT (at anytime)");
+            String input[] = this.readInput();
+            String s = input[0].toLowerCase();
+            String message = "";
 
-                        else if (data[0].toLowerCase().equals("l")) {
-                            message = sendMessageReceiveResponse(data[0]);
-                            if (message.equals("OK")) {
-                                this.user.setState(User.State.LOGGING);
-                            }
-                        }
-
-                        else if (data[0].toLowerCase().equals("q")) {
-                            message = sendMessageReceiveResponse(data[0]);
-                            this.user.setState(User.State.DISCONNECTED);
-
-                        }
-                    }
-                    else{
-                        System.out.println("error, disconnecting");
-                        this.user.setState(User.State.DISCONNECTED);
-                    }
-
+            switch (s) {
+                case "r":
+                    this.writeMessage("[CONNECT] " + s);
+                    message = this.readMessage();
+                    if (message.equals("[INFO] Registering"))
+                        this.register();
                     break;
-                }
-                case REGISTERING: {
-                    System.out.println("Enter the desired data in this format: username password");
-                    data = readInput();
-                    if(data.length != 2){
-                        System.out.println("Please attend to the requested format");
-                        System.out.println("Both username and password cant have spaces");
-                        break;
-                    }
-                    message = sendMessageReceiveResponse(data[0] + " " + data[1]);
-                    if(!message.equals("OK")){
-                        System.out.println(message);
-                        break;
-                    }
-                    System.out.println("Registration Complete!");
-                    this.user.setState(User.State.AUTHENTICATED);
+                case "l":
+                    this.writeMessage("[CONNECT] " + s);
+                    message = this.readMessage();
+                    if (message.equals("[INFO] Logging in"))
+                        this.login();
                     break;
-                }
-                case LOGGING: {
-                    System.out.println("username password?");
-                    data = readInput();
-                    if(data.length != 2){
-                        System.out.println("Please attend to the requested format");
-                        System.out.println("Both username and password cant have spaces");
-                        break;
-                    }
-                    message = sendMessageReceiveResponse(data[0] + " " + data[1]);
-                    if(!message.equals("OK")){
-                        System.out.println(message);
-                        break;
-                    }
-                    System.out.println("Authentication Complete!");
-                    this.user.setState(User.State.AUTHENTICATED);
+                case "q":
+                    System.out.println("\nGOOD BYE\n");
+                    return;
+                default:
+                    System.out.println("Invalid input");
                     break;
-                }
-                case AUTHENTICATED: {
-                    this.user.setState(User.State.QUEUE);
-                }
-                case QUEUE: {
-                    message = readMessage();
-                    System.out.println("SERVER" + "-" + message);
-                    String[] splitMessage = message.split("-");
-                    String identifier = splitMessage[0];
-                    if (identifier.equals("INFO")) {
-                        System.out.println(message);
-                        buffer.clear();
-                        buffer.put("OK".getBytes());
-                        buffer.flip();
-                        channel.write(buffer);
-                        this.user.setState(User.State.PLAYING);
-                    }
-                }
-                case PLAYING: {
-                    while(true){
-                        message = readMessage();
-                        System.out.println("SERVER" + "-" + message);
-                        String[] splitMessage = message.split("-");
-                        String identifier = splitMessage[0];
-                        if(identifier.equals("INFO")){
-                            System.out.println(message);
-                            buffer.clear();
-                            buffer.put("OK".getBytes());
-                            buffer.flip();
-                            channel.write(buffer);
-                        } else if(identifier.equals("PLAY")){
-                            System.out.println(message);
-                            
-                            Timer timer = new Timer();
-        
-                            TimerTask timeoutTask = new TimerTask() {
-                                @Override
-                                public void run() {
-                                    System.out.println("\nTimeout reached. Playing automatically...");
-                                    Random random = new Random();
-                                    int play = random.nextInt(12) + 1;
-                                    buffer.clear();
-                                    buffer.put(Integer.toString(play).getBytes());
-                                    buffer.flip();
-                                    try {
-                                        channel.write(buffer);
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            };
-                            timer.schedule(timeoutTask, TIMEOUT);
-                            
-                            scanner.nextLine(); // Wait for user to press Enter
-                            timer.cancel(); // Cancel the timeout task
-                            
-                            // Continue with the rest of the program
-                            Random random = new Random();
-                            int play = random.nextInt(12) + 1;
-                            buffer.clear();
-                            buffer.put(Integer.toString(play).getBytes());
-                            buffer.flip();
-                            channel.write(buffer);
-                          
-                        }else if(identifier.equals("EXIT")){
-                            System.out.println("Your updated score is " + user.getScore());
-                            System.out.println("Exiting back to wait queue");
-                            buffer.clear();
-                            buffer.put("OK".getBytes());
-                            buffer.flip();
-                            channel.write(buffer);
-                            user.setState(User.State.QUEUE);
-                            break;
-                        }
-
-                        
-                    }
-                }
             }
         }
     }
 
-    private String[] readInput(){
-        String input = scanner.nextLine();
-        return input.split("\\s+");
+    private void register() throws IOException {
+        while (true) {
+            System.out.println("Register in this format: username password");
+            String input[] = this.readInput();
+
+            if (input.length != 2){
+                System.out.println("Please attend to the requested format");
+                System.out.println("Neither the username nor the password should contain spaces");
+                return;
+            }
+
+            this.writeMessage("[REGISTER] " + input[0] + " " + input[1]);
+
+            String message = this.readMessage();
+            if (message.equals("[INFO] Added to queue"))
+                this.queue();
+            else if (message.equals("[INFO] User already exists, try again!"))
+                System.out.println(message);
+        }
     }
 
+    private void login() throws IOException {
+        while (true) {
+            System.out.println("Login in this format: username password");
+            String input[] = this.readInput();
+
+            if (input.length != 2) {
+                System.out.println("Please attend to the requested format");
+                System.out.println("Neither the username nor the password should contain spaces");
+                return;
+            }
+
+            this.writeMessage("[LOGIN] " + input[0] + " " + input[1]);
+
+            String message = this.readMessage();
+            if (message.equals("[INFO] Added to queue"))
+                this.queue();
+            else if (message.equals("[INFO] Invalid credentials, try again!"))
+                System.out.println(message);
+        }
+    }
+
+    private void queue() throws IOException {
+        this.writeMessage("[QUEUE] ");
+
+        while (true) {
+            System.out.println("You were added to the queue");
+            this.playGame();
+        }
+    }
+
+    private void playGame() throws IOException {
+        while (true) {
+            String message = this.readMessage();
+            System.out.println(message);
+
+            String[] split_message = message.split("]");
+            String identifier = split_message[0];
+
+            switch (identifier) {
+                case "[INFO":
+                    this.writeMessage("[INFO] Message received");
+                    break;
+                case "[PLAY":
+                    this.play();
+                    break;
+                case "[EXIT":
+                    this.writeMessage("[INFO] Message received");
+                    System.out.println("Your updated score is " + this.user.getGlobalScore());
+                    return;
+                default:
+                    System.out.println("Invalid message");
+                    return;
+            }
+        }
+    }
+
+// ---------------------------------------------------------------------------------------------------
+
+    private void play() {
+        Timer timer = new Timer();
+        TimerTask timeoutTask = new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("\nTimeout reached. Playing automatically...");
+                rollDice();
+            }
+        };
+
+        timer.schedule(timeoutTask, TIMEOUT);             
+        this.scanner.nextLine(); // wait for user to press Enter key
+        timer.cancel(); // cancel the timeout task    
+
+        // continue with the rest of the program
+        rollDice();
+    }
+
+    private void rollDice() {
+        Random random = new Random();
+        int play = random.nextInt(12) + 1;
+        String message = "[PLAY] " + Integer.toString(play);
+
+        buffer.clear();
+        buffer.put(message.getBytes());
+        buffer.flip();
+        try {
+            channel.write(buffer);
+            System.out.println("You got " + Integer.toString(play));
+        } 
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
+
+// ---------------------------------------------------------------------------------------------------
