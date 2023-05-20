@@ -56,9 +56,9 @@ public class Client {
         try {
             Signal.handle(new Signal("INT"), this.signal_handler);
 
-            while (true)
-                if (!this.connect())
-                        break;
+            String message = this.readMessage();
+            if (message.equals("[INFO] You are connected"))
+                this.connect();
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -99,110 +99,87 @@ public class Client {
 
 // ---------------------------------------------------------------------------------------------------
 
-    private boolean connect() throws IOException {
-        System.out.println("'R' to REGISTER, 'L' to LOGIN, or '^C' to QUIT (at anytime)");
+    private void connect() throws IOException {
+        while (true) {
+            System.out.println("'R' to REGISTER, 'L' to LOGIN, or '^C' to QUIT (at anytime)");
+            String input[] = this.readInput();
+            String s = input[0].toLowerCase();
+            String message = "";
 
-        String message = "";
-        String input[] = this.readInput();
-        String s = input[0].toLowerCase();
-
-        switch (s) {
-            case "r":
-                this.writeMessage("[CONNECT] " + s);
-                message = this.readMessage();
-                if (message.equals("[INFO] Message received"))
-                    if (!this.register())
-                        return false;
-                break;
-            case "l":
-                this.writeMessage("[CONNECT] " + s);
-                message = this.readMessage();
-                if (message.equals("[INFO] Message received"))
-                    if (!this.login())
-                        return false;
-                break;
-            case "q":
-                this.writeMessage("[CONNECT] " + s);
-                message = this.readMessage();
-                if (message.equals("[INFO] Message received")) {
-                    System.out.println("Goodbye!");
-                    return false;
-                }
-                break;
-            default:
-                System.out.println("Invalid input");
-                return false;
+            switch (s) {
+                case "r":
+                    this.writeMessage("[CONNECT] " + s);
+                    message = this.readMessage();
+                    if (message.equals("[INFO] Registering"))
+                        this.register();
+                    break;
+                case "l":
+                    this.writeMessage("[CONNECT] " + s);
+                    message = this.readMessage();
+                    if (message.equals("[INFO] Logging in"))
+                        this.login();
+                    break;
+                case "q":
+                    return;
+                default:
+                    System.out.println("Invalid input");
+                    break;
+            }
         }
-
-        return true;
     }
 
-    private boolean register() throws IOException {
-        System.out.println("Register in this format: username password");
-        String input[] = this.readInput();
+    private void register() throws IOException {
+        while (true) {
+            System.out.println("Register in this format: username password");
+            String input[] = this.readInput();
 
-        if (input.length != 2){
-            System.out.println("Please attend to the requested format");
-            System.out.println("Neither the username nor the password should contain spaces");
-            return false;
+            if (input.length != 2){
+                System.out.println("Please attend to the requested format");
+                System.out.println("Neither the username nor the password should contain spaces");
+                return;
+            }
+
+            this.writeMessage("[REGISTER] " + input[0] + " " + input[1]);
+
+            String message = this.readMessage();
+            if (message.equals("[INFO] Added to queue"))
+                this.queue();
+            else if (message.equals("[INFO] User already exists, try again!"))
+                System.out.println(message);
         }
-
-        this.writeMessage("[REGISTER] " + input[0] + " " + input[1]);
-        String message = this.readMessage();
-        if (!message.equals("[INFO] Message received")) {
-            System.out.println(message);
-            return false;
-        }
-
-        System.out.println("Registration complete!");
-
-        while (true) 
-            if (!this.queue())
-                break;
-        
-        return true;
     }
 
-    private boolean login() throws IOException {
-        System.out.println("Login in this format: username password");
-        String input[] = this.readInput();
+    private void login() throws IOException {
+        while (true) {
+            System.out.println("Login in this format: username password");
+            String input[] = this.readInput();
 
-        if (input.length != 2) {
-            System.out.println("Please attend to the requested format");
-            System.out.println("Neither the username nor the password should contain spaces");
-            return false;
+            if (input.length != 2) {
+                System.out.println("Please attend to the requested format");
+                System.out.println("Neither the username nor the password should contain spaces");
+                return;
+            }
+
+            this.writeMessage("[LOGIN] " + input[0] + " " + input[1]);
+
+            String message = this.readMessage();
+            if (message.equals("[INFO] Added to queue"))
+                this.queue();
+            else if (message.equals("[INFO] Invalid credentials, try again!"))
+                System.out.println(message);
         }
-
-        this.writeMessage("[LOGIN] " + input[0] + " " + input[1]);
-        String message = this.readMessage();
-        if (!message.equals("[INFO] Message received")) {
-            System.out.println(message);
-            return false;
-        }
-
-        System.out.println("Authentication complete");
-
-        while (true) 
-            if (!this.queue())
-                break;
-
-        return true;
     }
 
-    private boolean queue() throws IOException {
-        this.writeMessage("[QUEUE] ");
+    private void queue() throws IOException {
+        while (true) {
+            this.writeMessage("[QUEUE] ");
 
-        String message = this.readMessage();
-        if (!message.equals("[INFO] Message received")) {
-            System.out.println(message);
-            return false;
+            System.out.println("You were added to the queue");
+            this.playGame();
         }
-
-        System.out.println("You were added to the queue");
-        return this.playGame();
     }
 
-    private boolean playGame() throws IOException {
+    private void playGame() throws IOException {
         while (true) {
             String message = this.readMessage();
             System.out.println(message);
@@ -219,12 +196,11 @@ public class Client {
                     break;
                 case "[EXIT":
                     System.out.println("Your updated score is " + this.user.getGlobalScore());
-                    System.out.println("Returning to queue");
-                    this.writeMessage("[INFO] Message received");
-                    return true;
+                    System.out.println("You were added to the queue");
+                    return;
                 default:
                     System.out.println("Invalid message");
-                    break;
+                    return;
             }
         }
     }

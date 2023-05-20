@@ -16,7 +16,7 @@ public class Server {
     private static final int PORT = 5002;
     private static final int QUEUE_LIMIT = 5;
     private static final int MAX_GAMES = 1;
-    private static final int GAME_CLIENTS = 3;
+    private static final int GAME_CLIENTS = 2;
 
     private List<Client> clients;
     private Queue<User> queue;
@@ -139,7 +139,6 @@ public class Server {
         Client client = new Client(client_channel);
         clients.add(client);
 
-        client_channel.register(this.selector, SelectionKey.OP_READ, user);
         client_channel.register(this.selector, SelectionKey.OP_WRITE, user);
 
         System.out.println("New client channel: " + client_channel.getRemoteAddress());
@@ -162,33 +161,28 @@ public class Server {
 
             switch (identifier) {
                 case "[CONNECT":
-                    if(message.equals("r"))
+                    System.out.println("CONNECT READ");
+                    content = split_message[1].trim();
+                    if(content.equals("r"))
                         user.updateFlag("REG");
-                    else if(message.equals("l"))
+                    else if(content.equals("l"))
                         user.updateFlag("LOG");
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[REGISTER":
-                    content = split_message[1];
-                    this.registerClient(content, user, client_channel);
-                    key.interestOps(SelectionKey.OP_WRITE);
-                    break;
-                case "[REG-ERROR":
+                    System.out.println("REGISTER READ");
                     content = split_message[1];
                     this.registerClient(content, user, client_channel);
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[LOGIN":
-                    content = split_message[1];
-                    this.loginClient(content, user, client_channel);
-                    key.interestOps(SelectionKey.OP_WRITE);
-                    break;
-                case "[LOG-ERROR":
+                    System.out.println("LOGIN READ");
                     content = split_message[1];
                     this.loginClient(content, user, client_channel);
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[QUEUE":
+                    System.out.println("QUEUE READ");
                     this.queue.add(user);
                     break;
                 default:
@@ -204,32 +198,34 @@ public class Server {
 
         switch (user.getFlag()) {
             case "CON":
-                this.writeMessage(client_channel, "[INFO] Message received");
-                key.interestOps(SelectionKey.OP_READ);
+                System.out.println("CON WRITE");
+                this.writeMessage(client_channel, "[INFO] You are connected");
                 break;
             case "REG":
-                this.writeMessage(client_channel, "[INFO] Message received");
-                key.interestOps(SelectionKey.OP_READ);
+                System.out.println("REG WRITE");
+                this.writeMessage(client_channel, "[INFO] Registering");
                 break;
             case "R-ERR":
-                this.writeMessage(client_channel, "User already exists, try again!");
-                key.interestOps(SelectionKey.OP_READ);
+                System.out.println("R-ERR WRITE");
+                this.writeMessage(client_channel, "[INFO] User already exists, try again!");
                 break;
             case "LOG":
-                this.writeMessage(client_channel, "[INFO] Message received");
-                key.interestOps(SelectionKey.OP_READ);
+                System.out.println("LOG WRITE");
+                this.writeMessage(client_channel, "[INFO] Logging in");
                 break;
             case "L-ERR":
-                this.writeMessage(client_channel, "Invalid credentials, try again!");
-                key.interestOps(SelectionKey.OP_READ);
+                System.out.println("L-ERR WRITE");
+                this.writeMessage(client_channel, "[INFO] Invalid credentials, try again!");
                 break;
             case "WQ":
-                this.writeMessage(client_channel, "[INFO] Starting the game");
+                System.out.println("WQ WRITE");
+                this.writeMessage(client_channel, "[INFO] Added to queue");
                 break;
             default:
-                key.interestOps(SelectionKey.OP_READ);
                 break;
         }
+
+        key.interestOps(SelectionKey.OP_READ);
     }
 
 // ---------------------------------------------------------------------------------------------------
@@ -282,11 +278,11 @@ public class Server {
 
         User u = this.database.loginUser(data);
         if (u != null) {
-            u.setUsername(u.getUsername());
-            u.setPassword(u.getPassword());
-            u.updateFlag("WQ");
+            user.setUsername(u.getUsername());
+            user.setPassword(u.getPassword());
+            user.updateFlag("WQ");
 
-            System.out.println("User [" + u.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
+            System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
         }
         else
             user.updateFlag("L-ERR");
