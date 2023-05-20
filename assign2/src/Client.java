@@ -120,6 +120,7 @@ public class Client {
                         this.login();
                     break;
                 case "q":
+                    System.out.println("\nGOOD BYE\n");
                     return;
                 default:
                     System.out.println("Invalid input");
@@ -235,6 +236,7 @@ public class Client {
         buffer.flip();
         try {
             channel.write(buffer);
+            System.out.println("You got " + Integer.toString(play));
         } 
         catch (IOException e) {
             e.printStackTrace();

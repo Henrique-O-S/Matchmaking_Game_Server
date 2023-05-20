@@ -161,7 +161,7 @@ public class Server {
 
             switch (identifier) {
                 case "[CONNECT":
-                    System.out.println("CONNECT READ");
+                    //System.out.println("CONNECT READ");
                     content = split_message[1].trim();
                     if(content.equals("r"))
                         user.updateFlag("REG");
@@ -170,19 +170,19 @@ public class Server {
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[REGISTER":
-                    System.out.println("REGISTER READ");
+                    //System.out.println("REGISTER READ");
                     content = split_message[1];
                     this.registerClient(content, user, client_channel);
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[LOGIN":
-                    System.out.println("LOGIN READ");
+                    //System.out.println("LOGIN READ");
                     content = split_message[1];
                     this.loginClient(content, user, client_channel);
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[QUEUE":
-                    System.out.println("QUEUE READ");
+                    //System.out.println("QUEUE READ");
                     this.queue.add(user);
                     break;
                 default:
@@ -198,27 +198,27 @@ public class Server {
 
         switch (user.getFlag()) {
             case "CON":
-                System.out.println("CON WRITE");
+                //System.out.println("CON WRITE");
                 this.writeMessage(client_channel, "[INFO] You are connected");
                 break;
             case "REG":
-                System.out.println("REG WRITE");
+                //System.out.println("REG WRITE");
                 this.writeMessage(client_channel, "[INFO] Registering");
                 break;
             case "R-ERR":
-                System.out.println("R-ERR WRITE");
+                //System.out.println("R-ERR WRITE");
                 this.writeMessage(client_channel, "[INFO] User already exists, try again!");
                 break;
             case "LOG":
-                System.out.println("LOG WRITE");
+                //System.out.println("LOG WRITE");
                 this.writeMessage(client_channel, "[INFO] Logging in");
                 break;
             case "L-ERR":
-                System.out.println("L-ERR WRITE");
+                //System.out.println("L-ERR WRITE");
                 this.writeMessage(client_channel, "[INFO] Invalid credentials, try again!");
                 break;
             case "WQ":
-                System.out.println("WQ WRITE");
+                //System.out.println("WQ WRITE");
                 this.writeMessage(client_channel, "[INFO] Added to queue");
                 break;
             default:
