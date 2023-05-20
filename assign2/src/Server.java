@@ -124,7 +124,7 @@ public class Server {
 
                         players_in_limits = 0;
                         for(User other_user : this.queue){
-                            if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score){
+                            if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score && this.activeUsers.contains(other_user)){
                                 players_in_limits++;
                             }
 
