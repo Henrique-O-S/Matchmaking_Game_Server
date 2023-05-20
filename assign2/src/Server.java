@@ -115,22 +115,24 @@ public class Server {
                     int players_in_limits = 0;
 
                     outerSearch: for(User user : this.queue){
-                        // set limits based on current client
-                        base_score = user.getGlobalScore();
-                        max_score = base_score + search_limits;
-                        if(base_score - search_limits > 0)
-                            min_score = base_score - search_limits;
-                        else
-                            min_score = 0;
+                        if (this.activeUsers.contains(user)){
+                            // set limits based on current client
+                            base_score = user.getGlobalScore();
+                            max_score = base_score + search_limits;
+                            if(base_score - search_limits > 0)
+                                min_score = base_score - search_limits;
+                            else
+                                min_score = 0;
 
-                        players_in_limits = 0;
-                        for(User other_user : this.queue){
-                            if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score && this.activeUsers.contains(other_user)){
-                                players_in_limits++;
-                            }
+                            players_in_limits = 0;
+                            for(User other_user : this.queue){
+                                if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score && this.activeUsers.contains(other_user)){
+                                    players_in_limits++;
+                                }
 
-                            if(players_in_limits >= GAME_CLIENTS){
-                                break outerSearch;
+                                if(players_in_limits >= GAME_CLIENTS){
+                                    break outerSearch;
+                                }
                             }
                         }
                     }
