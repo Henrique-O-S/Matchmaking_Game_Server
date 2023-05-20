@@ -21,6 +21,7 @@ public class Server {
     private static final int MAX_GAMES = 1;
     private static final int GAME_CLIENTS = 2;
     private static final int TOKEN_BYTE_NUMBER = 10;
+    private static final int SEARCH_REFRESH_RATE = 60000;
 
     private List<Client> clients;
     private Queue<User> queue;
@@ -76,6 +77,10 @@ public class Server {
             this.selector = Selector.open();
             server_channel.register(this.selector, SelectionKey.OP_ACCEPT);
 
+            long start_time = System.currentTimeMillis();
+
+            int search_limits = 200;
+
             while (true) {
                 this.selector.select(1000);
                 
@@ -97,51 +102,91 @@ public class Server {
                 }
 
                 if (this.queue.size() >= GAME_CLIENTS) {
-                    List<User> users = new ArrayList<User>();
-                    while (users.size() < GAME_CLIENTS)
-                        users.add(this.queue.poll());
+                    int base_score = -1;
+                    int max_score = -1;
+                    int min_score = -1;
+                    int players_in_limits = 0;
 
-                    for (User user : users) {
-                        SelectionKey key = user.getClientChannel().keyFor(this.selector);
-                        if (key != null) {
-                            key.cancel();
-                            key.attach(null);
+                    outerSearch: for(User user : this.queue){
+                        // set limits based on current client
+                        base_score = user.getGlobalScore();
+                        max_score = base_score + search_limits;
+                        if(base_score - search_limits > 0)
+                            min_score = base_score - search_limits;
+                        else
+                            min_score = 0;
+
+                        players_in_limits = 0;
+                        for(User other_user : this.queue){
+                            if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score){
+                                players_in_limits++;
+                            }
+
+                            if(players_in_limits >= GAME_CLIENTS){
+                                break outerSearch;
+                            }
                         }
-                    }   
-
-                    // start new game
-                    Game game = new Game(users);
-                    Future<?> game_future = executor.submit(game);
-
-                    try {
-                        game_future.get(); // wait for game to finish
-                    }
-                    catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
                     }
 
-                    if (game.over()) {
-                        for (User user : users) {
-                            SocketChannel client_channel = user.getClientChannel();
-                            client_channel.configureBlocking(false);
-
-                            SelectionKey key = client_channel.keyFor(this.selector);
-                            if (key != null) {
-                                try {
-                                    int interestOps = key.interestOps();
-                                    key.interestOps(interestOps | SelectionKey.OP_READ);
-                                    key.attach(user);
-                                } catch (CancelledKeyException e) {
-                                    // something
+                    if(players_in_limits >= GAME_CLIENTS){
+                        List<User> users = new ArrayList<User>();
+                        while (users.size() < GAME_CLIENTS) {
+                            for(User user : this.queue){
+                                if(user.getGlobalScore() >= min_score && user.getGlobalScore() <= max_score){
+                                    users.add(this.queue.poll());
                                 }
                             }
                         }
 
                         for (User user : users) {
-                            user.updateFlag("WQ");
-                            this.queue.add(user);
+                            SelectionKey key = user.getClientChannel().keyFor(this.selector);
+                            if (key != null) {
+                                key.cancel();
+                                key.attach(null);
+                            }
+                        }   
+
+                        // start new game
+                        Game game = new Game(users);
+                        Future<?> game_future = executor.submit(game);
+
+                        // reset search timer
+                        start_time = System.currentTimeMillis();
+
+                        // reset search limits
+                        search_limits = 200;
+
+                        try {
+                            game_future.get(); // wait for game to finish
+                        }
+                        catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (game.over()) {
+                            for (User user : users) {
+                                SocketChannel client_channel = user.getClientChannel();
+                                client_channel.configureBlocking(false);
+
+                                SelectionKey key = client_channel.keyFor(this.selector);
+                                if (key != null) {
+                                    try {
+                                        int interestOps = key.interestOps();
+                                        key.interestOps(interestOps | SelectionKey.OP_READ);
+                                        key.attach(user);
+                                    } catch (CancelledKeyException e) {
+                                        // something
+                                    }
+                                }
+                            }
                         }
                     }
+                }
+
+                // update search limits
+                if(System.currentTimeMillis() - start_time > SEARCH_REFRESH_RATE){
+                    start_time = System.currentTimeMillis(); // reset search timer
+                    search_limits += 200;
                 }
             }
         }
@@ -204,7 +249,7 @@ public class Server {
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[QUEUE":
-                    //System.out.println("QUEUE READ");
+                    System.out.println("QUEUE READ");
                     this.queue.add(user);
                     break;
                 default:
@@ -302,9 +347,11 @@ public class Server {
         if (u != null) {
             user.setUsername(u.getUsername());
             user.setPassword(u.getPassword());
+            user.setGlobalScore(u.getGlobalScore());
             user.updateFlag("WQ");
 
             System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
+
         }
         else
             user.updateFlag("L-ERR");

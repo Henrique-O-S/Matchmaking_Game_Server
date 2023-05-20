@@ -105,7 +105,7 @@ public class Client {
 
     private void connect() throws IOException {
         while (true) {
-            System.out.println("'R' to REGISTER, 'L' to LOGIN, or '^C' to QUIT (at anytime)");
+            System.out.println("'R' to REGISTER, 'L' to LOGIN, 'Q' to QUIT or '^C' to QUIT at anytime");
             String input[] = this.readInput();
             String s = input[0].toLowerCase();
             String message = "";
@@ -178,9 +178,9 @@ public class Client {
     private void queue() throws IOException {
         this.writeMessage("[QUEUE] ");
 
-        while (true) {
-            System.out.println("You were added to the queue");
-            this.playGame();
+        while(true){
+        System.out.println("You were added to the queue");
+        this.playGame();
         }
     }
 
@@ -201,12 +201,33 @@ public class Client {
                     break;
                 case "[EXIT":
                     this.writeMessage("[INFO] Message received");
-                    System.out.println("Your updated score is " + this.user.getGlobalScore());
+                    int score = Integer.parseInt(split_message[1].split("&")[1]);
+                    System.out.println("Your updated score is " + score);
+                    this.playAgain();
                     return;
                 default:
                     System.out.println("Invalid message");
                     return;
             }
+        }
+    }
+
+    private void playAgain() throws IOException {
+        System.out.println("Want to play again?");
+        System.out.println("Hit 'Y' to continue playing, 'N' or '^C' to QUIT");
+        String input[] = this.readInput();
+        String s = input[0].toLowerCase();
+
+        switch (s) {
+            case "y":
+                break;
+            case "n":
+                System.out.println("\nGOOD BYE\n");
+                System.exit(0);              
+                break;
+            default:
+                System.out.println("Invalid input");
+                break;
         }
     }
 

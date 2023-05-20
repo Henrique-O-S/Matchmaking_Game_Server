@@ -74,6 +74,10 @@ public class User {
         this.password = password;
     }
 
+    public void setGlobalScore(int global_score) {
+        this.global_score = global_score;
+    }
+
     public void setClientChannel(SocketChannel client_channel) {
         this.client_channel = client_channel;
     }

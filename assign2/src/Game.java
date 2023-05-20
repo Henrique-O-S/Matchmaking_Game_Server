@@ -76,7 +76,7 @@ public class Game implements Runnable {
         System.out.println("Game ended");
         try {
             for (User player : this.players)
-                this.writeMessage(player.getClientChannel(), "[EXIT] Game ended");
+                this.writeMessage(player.getClientChannel(), "[EXIT] Game ended&" + player.getGlobalScore());
             this.getFeedback(false);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
