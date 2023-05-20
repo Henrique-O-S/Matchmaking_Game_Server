@@ -139,7 +139,7 @@ public class Server {
                         List<User> users = new ArrayList<User>();
                         while (users.size() < GAME_CLIENTS) {
                             for(User user : this.queue){
-                                if(user.getGlobalScore() >= min_score && user.getGlobalScore() <= max_score){
+                                if(user.getGlobalScore() >= min_score && user.getGlobalScore() <= max_score && this.activeUsers.contains(user)){
                                     users.add(this.queue.poll());
                                 }
                             }
