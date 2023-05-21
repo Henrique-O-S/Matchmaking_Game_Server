@@ -178,32 +178,34 @@ public class Client {
     private void queue() throws IOException {
         this.writeMessage("[QUEUE] ");
 
-        while(true){
-        System.out.println("You were added to the queue");
-        this.playGame();
+        while(true) {
+            System.out.println("You were added to the queue");
+            this.playGame();
         }
     }
 
     private void playGame() throws IOException {
         while (true) {
             String message = this.readMessage();
-            System.out.println(message);
 
             String[] split_message = message.split("]");
             String identifier = split_message[0];
 
             switch (identifier) {
                 case "[INFO":
+                    System.out.println(message);
                     this.writeMessage("[INFO] Message received");
                     break;
                 case "[PLAY":
+                    System.out.println(message);
                     this.play();
                     break;
                 case "[EXIT":
+                    System.out.println("[EXIT] Game ended");
                     this.writeMessage("[INFO] Message received");
                     int score = Integer.parseInt(split_message[1].split("&")[1]);
                     System.out.println("Your updated score is " + score);
-                    this.playAgain();
+                    //this.playAgain();
                     return;
                 default:
                     System.out.println("Invalid message");

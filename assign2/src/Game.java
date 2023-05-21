@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 public class Game implements Runnable {
     private static final int ROUNDS = 3;
 
+    private int id;
     private List<User> players;
     private int num_players;
     private ByteBuffer buffer;
