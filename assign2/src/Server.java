@@ -20,7 +20,7 @@ public class Server {
     private static final int PORT = 5002;
     private static final int QUEUE_LIMIT = 5;
     private static final int MAX_GAMES = 2;
-    private static final int GAME_CLIENTS = 1;
+    private static final int GAME_CLIENTS = 2;
     private static final int TOKEN_BYTE_NUMBER = 10;
     private static final int SEARCH_REFRESH_RATE = 60000;
 

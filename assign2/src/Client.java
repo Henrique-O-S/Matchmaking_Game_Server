@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------------------------------
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.io.IOException;
 import java.nio.channels.*;
 import java.nio.ByteBuffer;
@@ -235,23 +236,31 @@ public class Client {
 
 // ---------------------------------------------------------------------------------------------------
 
-    private void play() {
-        Timer timer = new Timer();
-        TimerTask timeoutTask = new TimerTask() {
-            @Override
-            public void run() {
-                System.out.println("\nTimeout reached. Playing automatically...");
-                rollDice();
-            }
-        };
+private void play() {
+    Timer timer = new Timer();
+    AtomicBoolean timeoutOccurred = new AtomicBoolean(false); // flag to track timeout
 
-        timer.schedule(timeoutTask, TIMEOUT);             
-        this.scanner.nextLine(); // wait for user to press Enter key
-        timer.cancel(); // cancel the timeout task    
+    TimerTask timeoutTask = new TimerTask() {
+        @Override
+        public void run() {
+            System.out.println("\nTimeout reached. Playing automatically...");
+            rollDice();
+            timeoutOccurred.set(true); // set the flag to true
+        }
+    };
 
-        // continue with the rest of the program
-        rollDice();
+    timer.schedule(timeoutTask, TIMEOUT);
+    this.scanner.nextLine(); // wait for user to press Enter key
+    timer.cancel(); // cancel the timeout task
+
+    if (timeoutOccurred.get()) {
+        return; // return if timeout occurred
     }
+
+    // continue with the rest of the program
+    rollDice();
+    return;
+}
 
     private void rollDice() {
         Random random = new Random();
