@@ -15,15 +15,18 @@ public class Game implements Runnable {
     private int id;
     private List<User> players;
     private Database database;
+    private Selector selector;
+    private Queue<User> queue;
     private int num_players;
     private ByteBuffer buffer;
     private boolean game_over;
 
 // ---------------------------------------------------------------------------------------------------
 
-    public Game(List<User> players, Database database) {
+    public Game(List<User> players, Database database, Selector selector, Queue<User> queue) {
         this.players = players;
         this.database = database;
+        this.selector = selector;
         this.num_players = players.size();
         this.buffer = ByteBuffer.allocate(1024);
         this.game_over = false;
@@ -79,6 +82,9 @@ public class Game implements Runnable {
 
         ArrayList<User> updated = new ArrayList<>();
 
+        for(User player : players)
+            updated.add(player);
+
         try {
             database.updateData(updated);
         } catch (IOException e) {
@@ -93,6 +99,34 @@ public class Game implements Runnable {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+
+        System.out.println("aaaaaa");
+        for(User player : players){
+            SocketChannel client_channel = player.getClientChannel();
+            try {
+                client_channel.configureBlocking(false);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            System.out.println("ccccccc");
+
+            SelectionKey key = client_channel.keyFor(this.selector);
+            if (key != null) {
+                try {
+                    System.out.println("eeeeee");
+                    int interestOps = key.interestOps();
+                    key.interestOps(interestOps | SelectionKey.OP_READ);
+                    key.attach(player);
+                } catch (CancelledKeyException e) {
+                    // something
+                }
+            }
+
+            System.out.println("dddddd");
+        }
+        System.out.println("bbbbb");
+        
 
         this.game_over = true;
         return;
@@ -195,6 +229,9 @@ public class Game implements Runnable {
                                 player.setPlay(play);
                                 System.out.println("Player " + player.getUsername() + " got " + play);
                                 break;
+                            }
+                            else if(identifier.equals("[STAY")){
+
                             }
                         }
                     }

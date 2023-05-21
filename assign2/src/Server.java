@@ -152,9 +152,9 @@ public class Server {
                         }   
 
                         // start new game
-                        Game game = new Game(users, database);
+                        Game game = new Game(users, database, this.selector, this.queue);
                         executor.submit(game);
-                        
+                    
 
                         // reset search timer
                         start_time = System.currentTimeMillis();
