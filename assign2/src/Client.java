@@ -216,11 +216,16 @@ public class Client {
     }
 
     private void playAgain() throws IOException {
-        System.out.println("Want to play again?");
-        System.out.println("Hit 'Y' to continue playing, 'N' or '^C' to QUIT");
+        //System.out.println("Want to play again?");
+        //System.out.println("Hit 'Y' to continue playing, 'N' or '^C' to QUIT");
+        System.out.println("Thank you for playing");
+        System.out.println("\nGOOD BYE\n");
+        System.exit(0); 
         String input[] = this.readInput();
         String s = input[0].toLowerCase();
 
+
+        /*
         switch (s) {
             case "y":
                 this.queue();
@@ -233,6 +238,7 @@ public class Client {
                 System.out.println("Invalid input");
                 break;
         }
+        */
     }
 
 // ---------------------------------------------------------------------------------------------------

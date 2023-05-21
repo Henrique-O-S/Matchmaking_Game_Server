@@ -100,7 +100,7 @@ public class Game implements Runnable {
             e.printStackTrace();
         }
 
-        System.out.println("aaaaaa");
+        /*
         for(User player : players){
             SocketChannel client_channel = player.getClientChannel();
             try {
@@ -109,12 +109,10 @@ public class Game implements Runnable {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            System.out.println("ccccccc");
 
             SelectionKey key = client_channel.keyFor(this.selector);
             if (key != null) {
                 try {
-                    System.out.println("eeeeee");
                     int interestOps = key.interestOps();
                     key.interestOps(interestOps | SelectionKey.OP_READ);
                     key.attach(player);
@@ -122,10 +120,8 @@ public class Game implements Runnable {
                     // something
                 }
             }
-
-            System.out.println("dddddd");
         }
-        System.out.println("bbbbb");
+        */
         
 
         this.game_over = true;
