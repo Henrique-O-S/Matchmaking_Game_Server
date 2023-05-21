@@ -20,7 +20,7 @@ public class Server {
     private static final int PORT = 5002;
     private static final int QUEUE_LIMIT = 5;
     private static final int MAX_GAMES = 2;
-    private static final int GAME_CLIENTS = 2;
+    private static final int GAME_CLIENTS = 1;
     private static final int TOKEN_BYTE_NUMBER = 10;
     private static final int SEARCH_REFRESH_RATE = 60000;
 
@@ -77,9 +77,6 @@ public class Server {
 
             // thread pool
             ExecutorService executor = Executors.newFixedThreadPool(MAX_GAMES);
-
-            List<Future<?>> game_futures = new ArrayList<>();
-            List<Game> curr_games = new ArrayList<>();
 
             // signal handler
             Signal.handle(new Signal("INT"), this.signal_handler);
@@ -155,9 +152,9 @@ public class Server {
                         }   
 
                         // start new game
-                        Game game = new Game(users);
-                        Future<?> game_future = executor.submit(game);
-                        game_futures.add(game_future);
+                        Game game = new Game(users, database);
+                        executor.submit(game);
+                        
 
                         // reset search timer
                         start_time = System.currentTimeMillis();
@@ -165,37 +162,6 @@ public class Server {
                         // reset search limits
                         search_limits = 200;
 
-                        // check if any game has finished
-                        List<Game> completed_games = new ArrayList<>();
-                        for (Game curr_game : curr_games) {
-                            if (curr_game.over()) {
-                                completed_games.add(curr_game);
-                                ArrayList<User> updated = new ArrayList<>();
-
-                                for (User user : users) {
-                                    SocketChannel client_channel = user.getClientChannel();
-                                    client_channel.configureBlocking(false);
-
-                                    SelectionKey key = client_channel.keyFor(this.selector);
-                                    if (key != null) {
-                                        try {
-                                            int interestOps = key.interestOps();
-                                            key.interestOps(interestOps | SelectionKey.OP_READ);
-                                            key.attach(user);
-                                        } catch (CancelledKeyException e) {
-                                            // something
-                                        }
-                                    }
-
-                                    updated.add(user);
-                                }
-
-                                database.updateData(updated);
-                            }
-                        }
-
-                        curr_games.removeAll(completed_games);
-                        game_futures.removeAll(completed_games);
                     }
                 }
 
@@ -265,7 +231,7 @@ public class Server {
                     key.interestOps(SelectionKey.OP_WRITE);
                     break;
                 case "[QUEUE":
-                    //System.out.println("QUEUE READ");
+                    System.out.println("QUEUE READ");
                     this.queue.add(user);
                     break;
                 default:

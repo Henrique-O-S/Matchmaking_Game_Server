@@ -14,14 +14,16 @@ public class Game implements Runnable {
 
     private int id;
     private List<User> players;
+    private Database database;
     private int num_players;
     private ByteBuffer buffer;
     private boolean game_over;
 
 // ---------------------------------------------------------------------------------------------------
 
-    public Game(List<User> players) {
+    public Game(List<User> players, Database database) {
         this.players = players;
+        this.database = database;
         this.num_players = players.size();
         this.buffer = ByteBuffer.allocate(1024);
         this.game_over = false;
@@ -74,6 +76,16 @@ public class Game implements Runnable {
             player.victory();
 
         System.out.println("Game ended");
+
+        ArrayList<User> updated = new ArrayList<>();
+
+        try {
+            database.updateData(updated);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
         try {
             for (User player : this.players)
                 this.writeMessage(player.getClientChannel(), "[EXIT] Game ended&" + player.getGlobalScore());
@@ -83,6 +95,7 @@ public class Game implements Runnable {
         }
 
         this.game_over = true;
+        return;
     }
 
 // ---------------------------------------------------------------------------------------------------

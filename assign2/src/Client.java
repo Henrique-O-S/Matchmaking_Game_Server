@@ -206,7 +206,7 @@ public class Client {
                     this.writeMessage("[INFO] Message received");
                     int score = Integer.parseInt(split_message[1].split("&")[1]);
                     System.out.println("Your updated score is " + score);
-                    //this.playAgain();
+                    this.playAgain();
                     return;
                 default:
                     System.out.println("Invalid message");
@@ -223,6 +223,7 @@ public class Client {
 
         switch (s) {
             case "y":
+                this.queue();
                 break;
             case "n":
                 System.out.println("\nGOOD BYE\n");
