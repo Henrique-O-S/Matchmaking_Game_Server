@@ -27,7 +27,7 @@ public class Server {
     private List<Client> clients;
     private Queue<User> queue;
 
-    private List<User> activeUsers;
+    private List<User> active_users;
 
     private Database database;
     private Selector selector;
@@ -45,7 +45,7 @@ public class Server {
         this.clients = new ArrayList<Client>();
         
         this.queue = new LinkedList<User>();
-        this.activeUsers = new ArrayList<User>();
+        this.active_users = new ArrayList<User>();
 
         this.database = new Database("data/users.txt");
         this.buffer = ByteBuffer.allocate(1024);
@@ -117,11 +117,12 @@ public class Server {
                     int min_score = -1;
                     int players_in_limits = 0;
 
-                    outerSearch: for(User user : this.queue){
-                        if (this.activeUsers.contains(user)){
+                    outerSearch: for(User user : this.queue) {
+                        if (this.active_users.contains(user)) {
                             // set limits based on current client
                             base_score = user.getGlobalScore();
                             max_score = base_score + search_limits;
+
                             if(base_score - search_limits > 0)
                                 min_score = base_score - search_limits;
                             else
@@ -129,26 +130,21 @@ public class Server {
 
                             players_in_limits = 0;
                             for(User other_user : this.queue){
-                                if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score && this.activeUsers.contains(other_user)){
+                                if(other_user.getGlobalScore() >= min_score && other_user.getGlobalScore() <= max_score && this.active_users.contains(other_user))
                                     players_in_limits++;
-                                }
 
-                                if(players_in_limits >= GAME_CLIENTS){
+                                if(players_in_limits >= GAME_CLIENTS)
                                     break outerSearch;
-                                }
                             }
                         }
                     }
 
                     if(players_in_limits >= GAME_CLIENTS){
                         List<User> users = new ArrayList<User>();
-                        while (users.size() < GAME_CLIENTS) {
-                            for(User user : this.queue){
-                                if(user.getGlobalScore() >= min_score && user.getGlobalScore() <= max_score && this.activeUsers.contains(user)){
+                        while (users.size() < GAME_CLIENTS)
+                            for(User user : this.queue)
+                                if(user.getGlobalScore() >= min_score && user.getGlobalScore() <= max_score && this.active_users.contains(user))
                                     users.add(this.queue.poll());
-                                }
-                            }
-                        }
 
                         for (User user : users) {
                             SelectionKey key = user.getClientChannel().keyFor(this.selector);
@@ -204,7 +200,7 @@ public class Server {
                 }
 
                 // update search limits
-                if(System.currentTimeMillis() - start_time > SEARCH_REFRESH_RATE){
+                if (System.currentTimeMillis() - start_time > SEARCH_REFRESH_RATE) {
                     start_time = System.currentTimeMillis(); // reset search timer
                     search_limits += 200;
                 }
@@ -344,7 +340,7 @@ public class Server {
         Client client = this.getClient(channel);
         System.out.println("Client disconnected: " + channel.getRemoteAddress());
         this.clients.remove(client);
-        this.activeUsers.remove(user);
+        this.active_users.remove(user);
         channel.close();
     }
 
@@ -355,7 +351,7 @@ public class Server {
             user.setUsername(data[0]);
             user.setPassword(data[1]);
             user.updateFlag("WQ");
-            activeUsers.add(user);
+            active_users.add(user);
             System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
         }
         else
@@ -371,7 +367,7 @@ public class Server {
             user.setPassword(u.getPassword());
             user.setGlobalScore(u.getGlobalScore());
             user.updateFlag("WQ");
-            activeUsers.add(user);
+            active_users.add(user);
             System.out.println("User [" + user.getUsername() + "] has connected from client " + client_channel.getRemoteAddress());
 
         }
